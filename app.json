@@ -4,7 +4,7 @@
     "slug": "SportsCredentials",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon.jpg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -29,6 +29,9 @@
       "eas": {
         "projectId": "de13d24f-3907-4465-a6f2-5818fa8913c7"
       }
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

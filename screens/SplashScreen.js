@@ -1,20 +1,38 @@
-import React, { useEffect } from 'react';
-import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Image, StyleSheet, Animated, Easing } from 'react-native';
 
 const SplashScreen = ({ navigation }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current; // Initial value for opacity: 0
+
   useEffect(() => {
-    setTimeout(() => {
-      navigation.replace('Login');
+    // Start the fade-in animation
+    Animated.timing(fadeAnim, {
+      toValue: 1, // Animate to opacity: 1
+      duration: 2000, // Animation duration in milliseconds
+      easing: Easing.linear, // Smooth easing
+      useNativeDriver: true, // Use native driver for better performance
+    }).start();
+
+    // Navigate to the next screen after 3 seconds
+    const timer = setTimeout(() => {
+      navigation.replace('Onboarding1'); // Replace with your desired screen
     }, 3000);
-  }, []);
+
+    return () => clearTimeout(timer); // Cleanup the timer
+  }, [fadeAnim, navigation]);
 
   return (
-    <LinearGradient colors={['#4c669f', '#3b5998', '#192f6a']} style={styles.container}>
-      <Image source={require('../assets/logo.jpg')} style={styles.logo} />
-      <Text style={styles.text}>AbhiShubh Technologies</Text>
-      <ActivityIndicator size="large" color="#fff" style={styles.loader} />
-    </LinearGradient>
+    <View style={styles.container}>
+      <Animated.View style={{ opacity: fadeAnim }}>
+        <Image
+          source={require('../assets/logo.jpg')} // Replace with your logo
+          style={styles.logo}
+        />
+      </Animated.View>
+      <Animated.View style={{ opacity: fadeAnim }}>
+        <Text style={styles.text}>NeoSport</Text>
+      </Animated.View>
+    </View>
   );
 };
 
@@ -23,19 +41,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#4a63ff', // Replace with your desired background color
   },
   logo: {
     width: 150,
     height: 150,
-    borderRadius: 20,
+    resizeMode: 'contain',
   },
   text: {
-    marginTop: 20,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
-  },
-  loader: {
     marginTop: 20,
   },
 });

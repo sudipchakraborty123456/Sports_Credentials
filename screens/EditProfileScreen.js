@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import Header from '../components/Header'; // Import Header component
+import BottomNav from '../components/BottomNav'; // Import BottomNav component
 
-const EditProfileScreen = () => {
+const EditProfileScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [activeNav, setActiveNav] = useState('home'); // State for active bottom nav item
 
   const handleSave = () => {
     setIsLoading(true);
@@ -21,70 +24,79 @@ const EditProfileScreen = () => {
 
   return (
     <LinearGradient colors={['#4c669f', '#3b5998', '#192f6a']} style={styles.container}>
-      <View style={styles.innerContainer}>
-        <Text style={styles.title}>Edit Profile</Text>
-        <Text style={styles.subtitle}>Update your profile information</Text>
+      {/* Header */}
+      <Header navigation={navigation} />
 
-        {/* Name Input */}
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="person" size={24} color="#999" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Name"
-            placeholderTextColor="#999"
-            value={name}
-            onChangeText={setName}
-          />
+      {/* Scrollable Content */}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.innerContainer}>
+          <Text style={styles.title}>Edit Profile</Text>
+          <Text style={styles.subtitle}>Update your profile information</Text>
+
+          {/* Name Input */}
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="person" size={24} color="#999" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Name"
+              placeholderTextColor="#999"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+
+          {/* Email Input */}
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="email" size={24} color="#999" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+            />
+          </View>
+
+          {/* Password Input */}
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="lock" size={24} color="#999" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
+
+          {/* Phone Number Input */}
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="phone" size={24} color="#999" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Phone Number"
+              placeholderTextColor="#999"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          {/* Save Button */}
+          <TouchableOpacity style={styles.button} onPress={handleSave} disabled={isLoading}>
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Save Changes</Text>
+            )}
+          </TouchableOpacity>
         </View>
+      </ScrollView>
 
-        {/* Email Input */}
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="email" size={24} color="#999" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-          />
-        </View>
-
-        {/* Password Input */}
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="lock" size={24} color="#999" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#999"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-        </View>
-
-        {/* Phone Number Input */}
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="phone" size={24} color="#999" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Phone Number"
-            placeholderTextColor="#999"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            keyboardType="phone-pad"
-          />
-        </View>
-
-        {/* Save Button */}
-        <TouchableOpacity style={styles.button} onPress={handleSave} disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Save Changes</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      {/* Bottom Navigation */}
+      <BottomNav navigation={navigation} activeNav={activeNav} setActiveNav={setActiveNav} />
     </LinearGradient>
   );
 };
@@ -92,8 +104,11 @@ const EditProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 20,
   },
   innerContainer: {
     width: '90%',
@@ -105,6 +120,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 2,
     elevation: 5,
+    alignSelf: 'center',
   },
   title: {
     fontSize: 24,

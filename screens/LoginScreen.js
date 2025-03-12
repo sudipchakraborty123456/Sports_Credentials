@@ -26,7 +26,7 @@ const LoginScreen = ({ navigation }) => {
                     'clientSecret': 'f3ayo1fvemqxun1yoyy27mdk8ksbtlik',
                 },
                 body: JSON.stringify({
-                    phoneNumber: `"${phoneNumber}"`,
+                    phoneNumber: `+91${phoneNumber}`,
                     channels: ['SMS'],
                     otpLength: '4',
                 }),
