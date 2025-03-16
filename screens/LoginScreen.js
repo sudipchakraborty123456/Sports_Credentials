@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [otp, setOtp] = useState('');
     const [isOtpSent, setIsOtpSent] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [requestId, setRequestId] = useState(''); // To store the requestId from the OTP sending API
+    const [requestId, setRequestId] = useState('');
 
     const handleSendOtp = async () => {
         if (!phoneNumber) {
@@ -33,10 +34,9 @@ const LoginScreen = ({ navigation }) => {
             });
 
             const data = await response.json();
-            console.log(phoneNumber, data);
 
             if (response.ok) {
-                setRequestId(data.requestId); // Store the requestId for OTP verification
+                setRequestId(data.requestId);
                 Alert.alert('OTP Sent', `OTP has been sent to ${phoneNumber}`);
                 setIsOtpSent(true);
             } else {
@@ -57,7 +57,8 @@ const LoginScreen = ({ navigation }) => {
         setIsLoading(true);
 
         try {
-            const response = await fetch('https://auth.otpless.app/auth/v1/verify/otp', {
+            // Step 1: Verify OTP
+            const verifyResponse = await fetch('https://auth.otpless.app/auth/v1/verify/otp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,19 +71,43 @@ const LoginScreen = ({ navigation }) => {
                 }),
             });
 
-            const data = await response.json();
+            const verifyData = await verifyResponse.json();
 
-            if (response.ok) {
-                Alert.alert('Success', 'OTP verified successfully!');
+            if (!verifyResponse.ok) {
+                Alert.alert('Error', verifyData.message || 'Invalid OTP. Please try again.');
+                return;
+            }
+
+            // Step 2: Call Login API after OTP verification
+            const loginResponse = await fetch(`http://api.hatrickzone.com/api/signup-or-login?phone_number=${phoneNumber}`, {
+                method: 'GET',
+                headers: {
+                    'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+                },
+            });
+
+            const loginData = await loginResponse.json();
+            console.log(loginData, "loginData");
+
+            if (loginResponse.ok) {
+                Alert.alert('Success', 'Login successful!');
+                await AsyncStorage.setItem('isLoggedIn', 'true');
+                // await AsyncStorage.setItem('loginData', loginData);
                 navigation.navigate('Dashboard');
             } else {
-                Alert.alert('Error', data.message || 'Invalid OTP. Please try again.');
+                Alert.alert('Error', loginData.message || 'Login failed. Please try again.');
             }
         } catch (error) {
-            Alert.alert('Error', 'An error occurred while verifying OTP.');
+            console.error('Error:', error);
+            Alert.alert('Error', 'An error occurred. Please try again.');
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // Define the handleGoToHome function
+    const handleGoToHome = () => {
+        navigation.navigate('Dashboard'); // Navigate to the Dashboard or Home screen
     };
 
     return (
@@ -139,9 +164,11 @@ const LoginScreen = ({ navigation }) => {
                     </>
                 )}
 
-                {/* Sign Up Link */}
-                <TouchableOpacity onPress={() => navigation.navigate('Dashboard')}>
-                    <Text style={styles.link}>Don't have an account? <Text style={styles.linkBold}>Sign Up</Text></Text>
+                {/* Go to Home Option */}
+                <TouchableOpacity onPress={handleGoToHome}>
+                    <Text style={styles.link}>
+                        Or <Text style={styles.linkBold}>Go to Home</Text>
+                    </Text>
                 </TouchableOpacity>
             </View>
         </LinearGradient>

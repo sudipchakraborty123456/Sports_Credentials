@@ -4,8 +4,8 @@ import { View, Text, Button, StyleSheet, Image } from 'react-native';
 const OnboardingScreen1 = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/logo.jpg')} style={styles.image} />
-      <Text style={styles.title}>Welcome to NeoSport!2</Text>
+      <Image source={require('../assets/logo.webp')} style={styles.image} />
+      <Text style={styles.title}>Welcome to A.P.P !</Text>
       <Text style={styles.description}>
         Discover the best sports events and stay updated with live scores.
       </Text>
@@ -24,7 +24,8 @@ const styles = StyleSheet.create({
   image: {
     width: 200,
     height: 200,
-    marginBottom: 20,
+    // marginBottom: 10,
+    resizeMode: 'contain',
   },
   title: {
     fontSize: 24,

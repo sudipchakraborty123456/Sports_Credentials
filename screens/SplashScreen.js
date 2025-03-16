@@ -25,12 +25,12 @@ const SplashScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Animated.View style={{ opacity: fadeAnim }}>
         <Image
-          source={require('../assets/logo.jpg')} // Replace with your logo
+          source={require('../assets/logo.webp')} // Replace with your logo
           style={styles.logo}
         />
       </Animated.View>
       <Animated.View style={{ opacity: fadeAnim }}>
-        <Text style={styles.text}>NeoSport</Text>
+        <Text style={styles.text}>A. P. P</Text>
       </Animated.View>
     </View>
   );
@@ -44,15 +44,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#4a63ff', // Replace with your desired background color
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 200,
+    height: 200,
     resizeMode: 'contain',
   },
   text: {
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
-    marginTop: 20,
+    // marginTop: 20,
   },
 });
 

@@ -5,15 +5,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const OnboardingScreen3 = ({ navigation }) => {
   const completeOnboarding = async () => {
     await AsyncStorage.setItem('onboardingComplete', 'true');
-    navigation.navigate('Login'); // Navigate to the main app
+    navigation.navigate('Dashboard'); // Navigate to the main app
   };
 
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/logo.jpg')} style={styles.image} />
+      <Image source={require('../assets/logo.webp')} style={styles.image} />
       <Text style={styles.title}>Ready to Get Started?</Text>
       <Text style={styles.description}>
-        Join NeoSport and enjoy the best sports experience.
+        Join A.P.P and enjoy the best sports experience.
       </Text>
       <Button title="Get Started" onPress={completeOnboarding} />
     </View>
@@ -30,7 +30,8 @@ const styles = StyleSheet.create({
   image: {
     width: 200,
     height: 200,
-    marginBottom: 20,
+    // marginBottom: 10,
+    resizeMode: 'contain',
   },
   title: {
     fontSize: 24,
