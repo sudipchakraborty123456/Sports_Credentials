@@ -25,7 +25,21 @@ const NeoSportApp = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [matchCards, setMatchCards] = useState([]);
-  const [matches, setMatches] = useState([]); // State for matches
+  const [assignMatchCards, setAssignMatchCards] = useState([]);
+  const [matches, setMatches] = useState([{
+    id: 1,
+    team1: { name: 'AUS', logo: 'https://city-png.b-cdn.net/preview/preview_public/uploads/preview/australia-sport-cricket-team-logo-hd-transparent-png-701751712502591qatlzstlo8.png' },
+    team2: { name: 'AUS', logo: 'https://banner2.cleanpng.com/lnd/20250108/ah/7526db520fe5c594dfebe519cd0ab5.webp' },
+    tournament: 'T20 World Cup',
+    countdown: '22h: 19m: 12s',
+  },
+  {
+    id: 2,
+    team1: { name: 'RCB', logo: 'https://banner2.cleanpng.com/lnd/20250107/gp/8381e7ef2caab7674871267dde56a3.webp' },
+    team2: { name: 'CSK', logo: 'https://banner2.cleanpng.com/20190220/ws/kisspng-logo-chennai-illustration-graphic-design-brand-1713906525653.webp' },
+    tournament: 'Indian Premier League',
+    countdown: '22h: 19m: 12s',
+  },]); // State for matches
   const [isLoading, setIsLoading] = useState(false);
 
   const tabs = [
@@ -37,113 +51,114 @@ const NeoSportApp = ({ navigation }) => {
     { id: 'hockey', icon: '🏏', text: 'Hockey' },
   ];
 
-  // Fetch matchCards data (unchanged)
   useEffect(() => {
-    const fetchMatchCards = async () => {
+    const logedIn = AsyncStorage.getItem('isLoggedIn');
+    setIsLoggedIn(logedIn);
+    fetchMatchCards();
+    fetchAssignedMatchCards();
+  }, []);
+  const fetchMatchCards = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://api.hatrickzone.com/api/games', {
+        method: 'GET',
+        headers: {
+          'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === 'success' && Array.isArray(data.data)) {
+        setMatchCards(data.data);
+      } else {
+        Alert.alert('Error', 'Failed to fetch match cards or invalid data format.');
+      }
+    } catch (error) {
+      console.error('Error fetching match cards:', error);
+      Alert.alert('Error',error,);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchAssignedMatchCards = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://api.hatrickzone.com/api/assigned-user-games/77', {
+        method: 'GET',
+        headers: {
+          'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === true && Array.isArray(data.data)) {
+        setAssignMatchCards(data.data);
+      } else {
+        Alert.alert('Error', 'Failed to fetch match cards or invalid data format.');
+      }
+    } catch (error) {
+      console.error('Error fetching match cards:', error);
+      Alert.alert('Error', 'An error occurred while fetching match cards.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const openWebsite = async (url) => {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url); // Open the URL in the browser
+    } else {
+      Alert.alert(`Don't know how to open this URL: ${url}`);
+    }
+  };
+
+  // Handle "Get Credentials" button click
+  const handleGetCredentials = async (card) => {
+    if (!isLoggedIn) {
+      navigation.navigate('Login');
+    } else {
       setIsLoading(true);
       try {
-        const response = await fetch('http://api.hatrickzone.com/api/games', {
-          method: 'GET',
+        console.log("game id:", card.id);
+
+        const response = await axios.post('http://api.hatrickzone.com/api/request-assign-game', {
+          user_id: '77', // Replace with the actual user ID
+          game_id: card.id, // Use the game_id from the selected card
+        }, {
           headers: {
             'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
             'Content-Type': 'application/json',
           },
         });
 
-        const data = await response.json();
+        const data = response.data;
 
-        if (response.ok && data.status === 'success' && Array.isArray(data.data)) {
-          setMatchCards(data.data);
+        if (data.status == true) {
+          setSelectedMatch({
+            ...card,
+            userName: data.data.username,
+            password: data.data.password,
+            // login_link: data.data.login_link || 'http://example.com', // Replace with the actual login link if available
+          });
+          setModalVisible(true);
         } else {
-          Alert.alert('Error', 'Failed to fetch match cards or invalid data format.');
+          Alert.alert('Error', data.message || 'Failed to fetch credentials.');
         }
       } catch (error) {
-        console.error('Error fetching match cards:', error);
-        Alert.alert('Error', 'An error occurred while fetching match cards.');
+        console.error('Error fetching credentials:', error);
+        Alert.alert('Error', 'An error occurred while fetching credentials.');
       } finally {
         setIsLoading(false);
       }
-    };
-
-    fetchMatchCards();
-  }, []);
-
-  // Fetch series and matches data
-  useEffect(() => {
-    const fetchSeriesAndMatches = async () => {
-      try {
-        const response = await axios.get('https://api.reddyanna.com/api/get-series-redis/4');
-        console.log('API Response:', response.data); // Log the response to inspect its structure
-
-        const data = response.data.data; // Access the "data" property from the response
-
-        if (data && Array.isArray(data)) {
-          const formattedMatches = data
-            .filter((series) => series.matches && Array.isArray(series.matches)) // Ensure "matches" exists and is an array
-            .map((series) => {
-              return series.matches.map((match) => ({
-                id: match.match_id, // Use match_id as the unique identifier
-                team1: { name: match.team1_name, logo: match.team1_logo },
-                team2: { name: match.team2_name, logo: match.team2_logo },
-                tournament: series.series_name,
-                countdown: match.match_time, // Use match_time for the countdown
-              }));
-            })
-            .flat(); // Flatten the array of arrays into a single array
-
-          setMatches(formattedMatches); // Update the matches state
-        } else {
-          console.error('API response is not an array:', data);
-          Alert.alert('Error', 'Invalid data format received from the API.');
-        }
-      } catch (error) {
-        console.error('Error fetching series and matches:', error);
-        Alert.alert('Error', 'Failed to fetch series and matches.');
-      }
-    };
-
-    fetchSeriesAndMatches(); // Call the function to fetch data
-  }, []);
-
-  // Handle "Live" button click
-  const handleLiveStream = async (eventid) => {
-    try {
-      const streamUrl = `https://sfront.starrexch.me/d?eventid=${eventid}`;
-      const supported = await Linking.canOpenURL(streamUrl);
-
-      if (supported) {
-        await Linking.openURL(streamUrl); // Open the stream URL in the browser
-      } else {
-        Alert.alert(`Don't know how to open this URL: ${streamUrl}`);
-      }
-    } catch (error) {
-      console.error('Error opening live stream:', error);
-      Alert.alert('Error', 'An error occurred while trying to open the live stream.');
     }
   };
 
-  const handleGetCredentials = (match) => {
-    if (!isLoggedIn) {
-      navigation.navigate('Login');
-    } else {
-      setSelectedMatch(match);
-      setModalVisible(true);
-    }
-  };
-
-  const copyToClipboard = async (text) => {
-    await Clipboard.setStringAsync(text);
-    Alert.alert('Copied to Clipboard', text);
-  };
-
-  const openWebsite = async (url) => {
-    const supported = await Linking.canOpenURL(url);
-    if (supported) {
-      await Linking.openURL(url);
-    } else {
-      Alert.alert(`Don't know how to open this URL: ${url}`);
-    }
-  };
+  // Rest of the component code...
 
   return (
     <View style={styles.container}>
@@ -171,7 +186,7 @@ const NeoSportApp = ({ navigation }) => {
         {matches.map((match) => (
           <View key={match.id} style={styles.match}>
             <View style={styles.team}>
-              <Image source={{ uri: match.team1.logo }} style={styles.teamLogo} />
+              <Image source={{ uri: match.team1.logo }} style={styles.teamLogo1} />
               <Text>{match.team1.name}</Text>
             </View>
             <View style={styles.info}>
@@ -187,13 +202,14 @@ const NeoSportApp = ({ navigation }) => {
               </TouchableOpacity>
             </View>
             <View style={styles.team}>
-              <Image source={{ uri: match.team2.logo }} style={styles.teamLogo} />
+              <Image source={{ uri: match.team2.logo }} style={styles.teamLogo1} />
               <Text>{match.team2.name}</Text>
             </View>
           </View>
         ))}
 
         {/* Match Cards */}
+        <Text style={styles.sectionHeader}>Not Assigned</Text>
         <View style={styles.matchContainer}>
           <View style={styles.matchRow}>
             {isLoading ? (
@@ -209,6 +225,42 @@ const NeoSportApp = ({ navigation }) => {
                     <Text style={styles.liveButtonText}>Get Credentials</Text>
                     <View style={styles.liveIcon} />
                   </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+
+        {/* Assigned Match Cards */}
+        <Text style={styles.sectionHeader}>Assigned</Text>
+        <View style={styles.matchContainer}>
+          <View style={styles.matchRow}>
+            {isLoading ? (
+              <ActivityIndicator size="large" color="#4a63ff" />
+            ) : (
+              assignMatchCards.map((card) => (
+                <View key={card.game_id} style={styles.matchCard}>
+                  <View style={styles.teamBox}>
+                    <Image source={{ uri: `${card.game_logo}` }} style={styles.teamLogo} />
+                    <Text>{card.game_name}</Text>
+                    {/* Display Username and Password */}
+                    <View style={styles.credentialsContainer}>
+                      <Text style={styles.credentialText}>Username: {card.username}</Text>
+                      <TouchableOpacity onPress={() => Clipboard.setStringAsync(card.username)}>
+                        <Icon name="content-copy" size={16} color="#4a63ff" />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.credentialsContainer}>
+                      <Text style={styles.credentialText}>Password: {card.password}</Text>
+                      <TouchableOpacity onPress={() => Clipboard.setStringAsync(card.password)}>
+                        <Icon name="content-copy" size={16} color="#4a63ff" />
+                      </TouchableOpacity>
+                    </View>
+                    {/* View Website Icon */}
+                    <TouchableOpacity onPress={() => openWebsite(card.login_link)}>
+                      <Icon name="web" size={24} color="#4a63ff" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             )}
@@ -338,6 +390,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   teamLogo: {
+    width: 100,
+    height: 50,
+    // borderRadius: 25,
+  },
+  teamLogo1: {
     width: 50,
     height: 50,
     borderRadius: 25,
@@ -392,6 +449,25 @@ const styles = StyleSheet.create({
   },
   teamBox: {
     alignItems: 'center',
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4a63ff',
+    marginTop: 20,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  credentialsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 5,
+  },
+  credentialText: {
+    fontSize: 12,
+    color: '#666',
   },
   timerCountdown: {
     fontWeight: 'bold',

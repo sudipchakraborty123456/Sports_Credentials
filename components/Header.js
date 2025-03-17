@@ -10,7 +10,7 @@ const Header = ({ navigation }) => {
           style={styles.profilePic}
         />
       </TouchableOpacity>
-      <Text style={styles.headerTitle} onPress={() => navigation.navigate('Dashboard')}>NeoSport</Text>
+      <Text style={styles.headerTitle} onPress={() => navigation.navigate('Dashboard')}>A. P. P</Text>
       <Text style={styles.bellIcon}>💰</Text>
     </View>
   );

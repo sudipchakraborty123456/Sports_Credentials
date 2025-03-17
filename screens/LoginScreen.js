@@ -55,7 +55,7 @@ const LoginScreen = ({ navigation }) => {
             return;
         }
         setIsLoading(true);
-
+    
         try {
             // Step 1: Verify OTP
             const verifyResponse = await fetch('https://auth.otpless.app/auth/v1/verify/otp', {
@@ -70,14 +70,14 @@ const LoginScreen = ({ navigation }) => {
                     otp: otp,
                 }),
             });
-
+    
             const verifyData = await verifyResponse.json();
-
+    
             if (!verifyResponse.ok) {
                 Alert.alert('Error', verifyData.message || 'Invalid OTP. Please try again.');
                 return;
             }
-
+    
             // Step 2: Call Login API after OTP verification
             const loginResponse = await fetch(`http://api.hatrickzone.com/api/signup-or-login?phone_number=${phoneNumber}`, {
                 method: 'GET',
@@ -85,14 +85,15 @@ const LoginScreen = ({ navigation }) => {
                     'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
                 },
             });
-
+    // console.log(loginResponse,"loginResponse");
+    
             const loginData = await loginResponse.json();
             console.log(loginData, "loginData");
-
+    
             if (loginResponse.ok) {
                 Alert.alert('Success', 'Login successful!');
                 await AsyncStorage.setItem('isLoggedIn', 'true');
-                // await AsyncStorage.setItem('loginData', loginData);
+                await AsyncStorage.setItem('loginData', JSON.stringify(loginData)); // Save loginData in AsyncStorage
                 navigation.navigate('Dashboard');
             } else {
                 Alert.alert('Error', loginData.message || 'Login failed. Please try again.');

@@ -1,13 +1,38 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'; // Add TouchableOpacity here
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // Import the icon library
 
 const BottomNav = ({ navigation, activeNav, setActiveNav }) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check login status when the component mounts
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const loggedIn = await AsyncStorage.getItem('isLoggedIn');
+      setIsLoggedIn(loggedIn === 'true');
+    };
+
+    checkLoginStatus();
+  }, []);
+
+  // Define navigation items with vector icons
   const navItems = [
-    { id: 'home', icon: '🏠', text: 'Home' },
-    { id: 'cut', icon: '✂️', text: 'Cut' },
-    { id: 'list', icon: '📄', text: 'List' },
-    { id: 'settings', icon: '⚙️', text: 'Settings' },
+    { id: 'home', icon: 'home', text: 'Home' },
+    { id: 'payment-method', icon: 'credit-card', text: 'Payment Method' },
+    { id: 'list', icon: 'format-list-bulleted', text: 'List' },
+    { id: 'settings', icon: 'cog', text: 'Settings' },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.setItem('isLoggedIn', 'false'); // Update AsyncStorage
+      setIsLoggedIn(false); // Update login state
+      navigation.navigate('Login'); // Redirect to Login after logout
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
 
   return (
     <View style={styles.bottomNav}>
@@ -16,19 +41,37 @@ const BottomNav = ({ navigation, activeNav, setActiveNav }) => {
           key={item.id}
           style={[styles.navItem, activeNav === item.id && styles.activeNavItem]}
           onPress={() => {
-            setActiveNav(item.id);
+            setActiveNav(item.id); // Set active navigation item
             if (item.id === 'settings') {
               navigation.navigate('EditProfile'); // Navigate to EditProfile when settings is clicked
             }
             if (item.id === 'home') {
-              navigation.navigate('Dashboard'); // Navigate to EditProfile when settings is clicked
+              navigation.navigate('Dashboard'); // Navigate to Dashboard when home is clicked
+            }
+            if (item.id === 'payment-method') {
+              navigation.navigate('PaymentMethods');
+            }
+            if (item.id === 'list') {
+              navigation.navigate('AddPaymentMethod');
             }
           }}
         >
-          <Text style={styles.navIcon}>{item.icon}</Text>
+          <Icon
+            name={item.icon}
+            size={24}
+            color={activeNav === item.id ? '#007bff' : '#000'}
+          />
           {activeNav === item.id && <Text style={styles.navText}>{item.text}</Text>}
         </TouchableOpacity>
       ))}
+
+      {/* Conditionally render Logout Button */}
+      {isLoggedIn && (
+        <TouchableOpacity style={styles.navItem} onPress={handleLogout}>
+          <Icon name="logout" size={24} color="#000" />
+          <Text style={styles.navText}>Logout</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -49,12 +92,10 @@ const styles = StyleSheet.create({
   activeNavItem: {
     color: '#007bff',
   },
-  navIcon: {
-    fontSize: 22,
-  },
   navText: {
     fontSize: 12,
     marginTop: 3,
+    color: '#000',
   },
 });
 

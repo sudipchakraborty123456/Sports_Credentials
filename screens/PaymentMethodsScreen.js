@@ -1,28 +1,25 @@
-import React, { useState } from 'react';
-import { View, ScrollView, Text, TextInput, TouchableOpacity, StyleSheet, Modal, Alert, Image } from 'react-native';
-import * as ImagePicker from 'expo-image-picker'; // Import expo-image-picker
+import React, { useState, useEffect } from 'react';
+import { View, ScrollView, Text, TextInput, TouchableOpacity, StyleSheet, Modal, Alert, Image, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 
 const PaymentMethodsScreen = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('bank-transfer');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
-  const [paymentType, setPaymentType] = useState(''); // Tracks the type of payment being added (bank, upi, crypto)
+  const [paymentType, setPaymentType] = useState('bank-transfer');
   const [bankName, setBankName] = useState('');
   const [accountHolderName, setAccountHolderName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [ifscCode, setIfscCode] = useState('');
   const [upiNumber, setUpiNumber] = useState('');
-  const [upiQRCode, setUpiQRCode] = useState(null); // Stores the UPI QR Code image URI
+  const [upiQRCode, setUpiQRCode] = useState(null);
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
-  const [cryptoQRCode, setCryptoQRCode] = useState(null); // Stores the Crypto QR Code image URI
+  const [cryptoQRCode, setCryptoQRCode] = useState(null);
   const [activeNav, setActiveNav] = useState('payment-method');
-  const [paymentMethods, setPaymentMethods] = useState([
-    { id: '1', type: 'Bank Transfer', details: 'Bank: SBI, A/C: ****1234' },
-    { id: '2', type: 'UPI', details: 'UPI ID: user@upi' },
-    { id: '3', type: 'Crypto', details: 'Wallet: 0x123...abc' },
-  ]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const tabs = [
     { id: 'all', text: 'All' },
@@ -31,34 +28,99 @@ const PaymentMethodsScreen = ({ navigation }) => {
     { id: 'crypto', text: 'Crypto' },
   ];
 
-  // Function to handle UPI QR Code upload
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('http://api.hatrickzone.com/api/get-payment-details/77', {
+          method: 'GET',
+          headers: {
+            'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const responseText = await response.text();
+
+        const data = JSON.parse(responseText);
+
+        if (data.status === true) {
+          const formattedMethods = formatPaymentMethods(data.data);
+          setPaymentMethods(formattedMethods);
+        } else {
+          Alert.alert('Error', 'Failed to fetch payment methods.');
+        }
+      } catch (error) {
+        console.error('Error fetching payment methods:', error);
+        Alert.alert('Error', 'An error occurred while fetching payment methods.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPaymentMethods();
+  }, []);
+
+  const formatPaymentMethods = (data) => {
+    const formattedMethods = [];
+
+    if (data['bank-transfer'] && Array.isArray(data['bank-transfer'])) {
+      data['bank-transfer'].forEach((method, index) => {
+        formattedMethods.push({
+          id: `bank-${index}`,
+          type: 'Bank Transfer',
+          details: `Bank: ${method.bank_name}, A/C: ${method.account_number.slice(-4)}`,
+        });
+      });
+    }
+
+    if (data.upi && Array.isArray(data.upi)) {
+      data.upi.forEach((method, index) => {
+        formattedMethods.push({
+          id: `upi-${index}`,
+          type: 'UPI',
+          details: `UPI ID: ${method.upi_number}`,
+        });
+      });
+    }
+
+    if (data.crypto && Array.isArray(data.crypto)) {
+      data.crypto.forEach((method, index) => {
+        formattedMethods.push({
+          id: `crypto-${index}`,
+          type: 'Crypto',
+          details: `Wallet: ${method.crypto_wallet.slice(0, 6)}...${method.crypto_wallet.slice(-4)}`,
+        });
+      });
+    }
+
+    return formattedMethods;
+  };
+
   const handleUploadUPIQRCode = async () => {
-    // Request permission to access the media library
-    
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to upload images.');
       return;
     }
-    
-    // Launch the image picker
+
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1], // Square aspect ratio for QR codes
+      aspect: [1, 1],
       quality: 1,
     });
+
     if (!result.cancelled) {
-      setUpiQRCode(result.assets[0].uri); 
+      setUpiQRCode(result.assets[0].uri);
     }
   };
 
   const savePaymentDetails = async (paymentData) => {
+    setLoading(true);
     try {
-      // Create a FormData object
       const formData = new FormData();
-  
-      // Append all fields to the FormData object
+
       formData.append('user_id', paymentData.user_id);
       formData.append('payment_method', paymentData.payment_method);
       formData.append('bank_name', paymentData.bank_name);
@@ -69,18 +131,15 @@ const PaymentMethodsScreen = ({ navigation }) => {
       formData.append('crypto_wallet', paymentData.crypto_wallet);
       formData.append('upi_number', paymentData.upi_number);
       formData.append('ifc_number', paymentData.ifc_number);
-  
-      // Append the UPI QR Code file if it exists
+
       if (paymentData.upi_qr_code) {
         formData.append('upi_qr_code', {
           uri: paymentData.upi_qr_code,
-          name: 'upi_qr_code.jpg', 
-          type: 'image/jpeg', 
+          name: 'upi_qr_code.jpg',
+          type: 'image/jpeg',
         });
       }
-      for (let [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
+
       const response = await fetch('http://api.hatrickzone.com/api/save-payment-details', {
         method: 'POST',
         headers: {
@@ -88,17 +147,13 @@ const PaymentMethodsScreen = ({ navigation }) => {
         },
         body: formData,
       });
-  
-      const responseText = await response.text(); 
-      console.log('API Response Text:', responseText); 
-  
-      // if (!response.ok) {
-      //   throw new Error(`HTTP error! Status: ${response.status}`);
-      // }
-  
-      const data = JSON.parse(responseText); 
-      console.log('API Response Data:', data); 
-  
+
+      const responseText = await response.text();
+      console.log('API Response Text:', responseText);
+
+      const data = JSON.parse(responseText);
+      console.log('API Response Data:', data);
+
       if (data.status === true) {
         Alert.alert('Success', 'Payment details saved successfully!');
       } else {
@@ -107,13 +162,15 @@ const PaymentMethodsScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error saving payment details:', error);
       Alert.alert('Error', `An error occurred while saving payment details: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAddPaymentMethod = () => {
     let newPaymentMethod;
     let paymentData = {
-      user_id: '77', // Replace with the actual user ID
+      user_id: '77',
       payment_method: paymentType,
       bank_name: bankName,
       account_holder_name: accountHolderName,
@@ -121,7 +178,7 @@ const PaymentMethodsScreen = ({ navigation }) => {
       ifc_number: ifscCode,
       upi_number: upiNumber,
       crypto_wallet: cryptoWalletAddress,
-      upi_qr_code: upiQRCode, 
+      upi_qr_code: upiQRCode,
     };
 
     switch (paymentType) {
@@ -163,13 +220,9 @@ const PaymentMethodsScreen = ({ navigation }) => {
         return;
     }
 
-    // Add the new payment method locally
     setPaymentMethods([...paymentMethods, newPaymentMethod]);
-
-    // Save payment details to the API
     savePaymentDetails(paymentData);
 
-    // Reset form fields
     setModalVisible(false);
     setBankName('');
     setAccountHolderName('');
@@ -256,9 +309,12 @@ const PaymentMethodsScreen = ({ navigation }) => {
               value={cryptoWalletAddress}
               onChangeText={setCryptoWalletAddress}
             />
-            <TouchableOpacity style={styles.uploadButton}  onPress={handleUploadUPIQRCode}>
+            <TouchableOpacity style={styles.uploadButton} onPress={handleUploadUPIQRCode}>
               <Text style={styles.uploadButtonText}>Upload Crypto QR Code</Text>
             </TouchableOpacity>
+            {upiQRCode && (
+              <Image source={{ uri: upiQRCode }} style={styles.qrCodeImage} />
+            )}
           </>
         );
       default:
@@ -268,36 +324,33 @@ const PaymentMethodsScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <Header navigation={navigation} />
 
-      {/* Tabs */}
-
-      {/* Payment Method Cards */}
       <ScrollView style={styles.paymentList}>
-        <View style={styles.paymentRow}>
-          {paymentMethods.map((payment) => (
-            <TouchableOpacity
-              key={payment.id}
-              style={styles.paymentCard}
-              onPress={() => handleViewDetails(payment)}
-            >
-              <Text style={styles.paymentType}>{payment.type}</Text>
-              <Text style={styles.paymentDetails}>{payment.details}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#4a63ff" style={styles.loadingIndicator} />
+        ) : (
+          <View style={styles.paymentRow}>
+            {paymentMethods.map((payment) => (
+              <TouchableOpacity
+                key={payment.id}
+                style={styles.paymentCard}
+                onPress={() => handleViewDetails(payment)}
+              >
+                <Text style={styles.paymentType}>{payment.type}</Text>
+                <Text style={styles.paymentDetails}>{payment.details}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
-      {/* Add Payment Method Button */}
       <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
         <Text style={styles.addButtonText}>+ Add Payment Method</Text>
       </TouchableOpacity>
 
-      {/* Bottom Navigation */}
       <BottomNav navigation={navigation} activeNav={activeNav} setActiveNav={setActiveNav} />
 
-      {/* Modal for Add Payment Method */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -492,6 +545,12 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  loadingIndicator: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
   },
 });
 
