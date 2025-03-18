@@ -19,14 +19,17 @@ const BottomNav = ({ navigation, activeNav, setActiveNav }) => {
   // Define navigation items with vector icons
   const navItems = [
     { id: 'home', icon: 'home', text: 'Home' },
-    { id: 'payment-method', icon: 'credit-card', text: 'Payment Method' },
-    { id: 'list', icon: 'format-list-bulleted', text: 'List' },
+    ...(isLoggedIn ? [{ id: 'payment-method', icon: 'credit-card', text: 'Payment Method' }] : []),
+    // { id: 'payment-method', icon: 'credit-card', text: 'Payment Method' },
+    // Conditionally add 'AddPaymentMethod' if user is logged in
+    ...(isLoggedIn ? [{ id: 'list', icon: 'format-list-bulleted', text: 'Add Payment' }] : []),
     { id: 'settings', icon: 'cog', text: 'Settings' },
   ];
 
   const handleLogout = async () => {
     try {
       await AsyncStorage.setItem('isLoggedIn', 'false'); // Update AsyncStorage
+      await AsyncStorage.setItem('loginData', JSON.stringify(null));
       setIsLoggedIn(false); // Update login state
       navigation.navigate('Login'); // Redirect to Login after logout
     } catch (error) {

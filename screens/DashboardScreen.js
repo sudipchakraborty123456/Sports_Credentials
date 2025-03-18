@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -18,6 +18,7 @@ import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useFocusEffect } from '@react-navigation/native';
 
 const NeoSportApp = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('cricket');
@@ -56,26 +57,36 @@ const NeoSportApp = ({ navigation }) => {
     { id: 'hockey', icon: '🏏', text: 'Hockey' },
   ];
 
-  useEffect(() => {
-    const fetchLoginStatus = async () => {
-      try {
-        const logedIn = await AsyncStorage.getItem('isLoggedIn');
-        setIsLoggedIn(logedIn === 'true');
-        const logInData = await AsyncStorage.getItem('loginData');
-        setIsLogInData(logInData ? JSON.parse(logInData) : null);
-      } catch (error) {
-        console.error('Error fetching login status or data:', error);
-      }
-    };
 
-    fetchLoginStatus();
-    fetchData();
-  }, []);
+
 
   const fetchData = async () => {
+    setRefreshing(true);
     await fetchMatchCards();
-    await fetchAssignedMatchCards();
+    const logInDataString = await AsyncStorage.getItem('loginData');
+    const logInData = logInDataString ? JSON.parse(logInDataString) : null;
+    setIsLogInData(logInData);
+    console.log(logInData?.data?.id, "-----------");
+    // {"status":true,"message":"User logged in successfully!","data":{"id":72,"name":null,"username":null,"email":null,"email_verified_at":null,"phone_number":"8927179792","is_admin":0,"profile_image":null,"language":null,"description":null,"user_status":"active","created_at":"2025-03-16T11:34:11.000000Z","updated_at":"2025-03-16T11:34:11.000000Z"}} -----------
+    // Use logInData directly instead of isLoggedIn
+    if (logInData?.data?.id) {
+      console.log("User is logged in, fetching assigned and unassigned match cards");
+      await fetchAssignedMatchCards(logInData?.data?.id);
+      await fetchUnAssignedMatchCards(logInData?.data?.id);
+    } else {
+      console.log("User is not logged in, skipping assigned and unassigned match cards");
+    }
+    setRefreshing(false);
   };
+
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
+
+
   const handleGetCredentials = async (card) => {
     // Ensure isLoggedIn is a string and properly checked
     if (isLoggedIn) {
@@ -138,6 +149,8 @@ const NeoSportApp = ({ navigation }) => {
   const fetchMatchCards = async () => {
     setIsLoading(true);
     try {
+      console.log('http://api.hatrickzone.com/api/games');
+
       const response = await fetch('http://api.hatrickzone.com/api/games', {
         method: 'GET',
         headers: {
@@ -162,12 +175,41 @@ const NeoSportApp = ({ navigation }) => {
     }
   };
 
-  const fetchAssignedMatchCards = async () => {
+  const fetchAssignedMatchCards = async (id) => {
     setIsLoading(true);
     try {
-      console.log(logInData.data.id,"---------");
-      
-      const response = await fetch(`http://api.hatrickzone.com/api/assigned-user-games/${logInData.data.id}`, {
+      console.log(`http://api.hatrickzone.com/api/assigned-user-games/${id}`);
+
+      const response = await fetch(`http://api.hatrickzone.com/api/assigned-user-games/${id}`, {
+        method: 'GET',
+        headers: {
+          'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === true && Array.isArray(data?.data)) {
+        setAssignMatchCards(data.data);
+      } else {
+        Alert.alert('Error', 'Failed to fetch match cards or invalid data format .');
+      }
+    } catch (error) {
+      console.error('Error fetching match cards:', error);
+      Alert.alert('Error', 'An error occurred while fetching match cards.');
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const fetchUnAssignedMatchCards = async (id) => {
+    setIsLoading(true);
+    try {
+      console.log(`http://api.hatrickzone.com/api/unassigned-user-games/${id}`);
+
+      const response = await fetch(`http://api.hatrickzone.com/api/unassigned-user-games/${id}`, {
         method: 'GET',
         headers: {
           'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
@@ -178,22 +220,21 @@ const NeoSportApp = ({ navigation }) => {
       const data = await response.json();
 
       if (response.ok && data.status === true && Array.isArray(data.data)) {
-        setAssignMatchCards(data.data);
+        setMatchCards(data.data);
       } else {
         Alert.alert('Error', 'Failed to fetch match cards or invalid data format .');
       }
     } catch (error) {
       console.error('Error fetching match cards:', error);
-      Alert.alert('Error', 'An error occurred while fetching match cards.');
+      Alert.alert('Error', 'An error occurred while fetching match cards.1');
     } finally {
       setIsLoading(false);
-      setRefreshing(false); 
+      setRefreshing(false);
     }
   };
-
   const onRefresh = () => {
-    setRefreshing(true); 
-    fetchData(); 
+    setRefreshing(true);
+    fetchData();
   };
 
   return (
@@ -203,6 +244,7 @@ const NeoSportApp = ({ navigation }) => {
 
       {/* Tabs */}
       <View>
+
         <ScrollView horizontal={true} showsHorizontalScrollIndicator={false} style={styles.tabs}>
           {tabs.map((tab) => (
             <TouchableOpacity
@@ -228,6 +270,7 @@ const NeoSportApp = ({ navigation }) => {
           />
         }
       >
+  
         {matches.map((match) => (
           <View key={match.id} style={styles.match}>
             <View style={styles.team}>
@@ -277,7 +320,7 @@ const NeoSportApp = ({ navigation }) => {
         </View>
 
         {/* Assigned Match Cards */}
-        <Text style={styles.sectionHeader}>Assigned</Text>
+        {assignMatchCards.length > 0 && <Text style={styles.sectionHeader}> Assigned</Text>}
         <View style={styles.matchContainer}>
           <View style={styles.matchRow}>
             {isLoading ? (

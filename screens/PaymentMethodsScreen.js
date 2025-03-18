@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Text, TextInput, TouchableOpacity, StyleSheet, Modal, Alert, Image, ActivityIndicator } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  Alert,
+  Image,
+  ActivityIndicator,
+  RefreshControl, // Added for pull-to-refresh
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
@@ -23,6 +35,7 @@ const PaymentMethodsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [logInData, setIsLogInData] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
 
   const tabs = [
     { id: 'all', text: 'All' },
@@ -30,55 +43,56 @@ const PaymentMethodsScreen = ({ navigation }) => {
     { id: 'upi', text: 'UPI' },
     { id: 'crypto', text: 'Crypto' },
   ];
-  useEffect(() => {
-    const fetchLoginStatus = async () => {
-      try {
-        const logedIn = await AsyncStorage.getItem('isLoggedIn');
-        setIsLoggedIn(logedIn === 'true');
-        const logInData = await AsyncStorage.getItem('loginData');
-        setIsLogInData(logInData ? JSON.parse(logInData) : null);
-      } catch (error) {
-        console.error('Error fetching login status or data:', error);
-      }
-    };
 
+  useEffect(() => {
     fetchLoginStatus();
-    // fetchData(); 
-  }, []);
-  useEffect(() => {
-    const fetchPaymentMethods = async () => {
-      setLoading(true);
-      try {
-        console.log(logInData.data.id);
-        
-        const response = await fetch(`http://api.hatrickzone.com/api/get-payment-details/27`, {
-          method: 'GET',
-          headers: {
-            'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const responseText = await response.text();
-
-        const data = JSON.parse(responseText);
-
-        if (data?.status === true) {
-          const formattedMethods = formatPaymentMethods(data?.data);
-          setPaymentMethods(formattedMethods);
-        } else {
-          Alert.alert('Error', 'Failed to fetch payment methods.');
-        }
-      } catch (error) {
-        console.error('Error fetching payment methods:', error);
-        Alert.alert('Error', 'An error occurred while fetching payment methods.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPaymentMethods();
   }, []);
+
+  const fetchLoginStatus = async () => {
+    try {
+      const logedIn = await AsyncStorage.getItem('isLoggedIn');
+      setIsLoggedIn(logedIn === 'true');
+      const logInData = await AsyncStorage.getItem('loginData');
+      setIsLogInData(logInData ? JSON.parse(logInData) : null);
+    } catch (error) {
+      console.error('Error fetching login status or data:', error);
+    }
+  };
+
+  const fetchPaymentMethods = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://api.hatrickzone.com/api/get-payment-details/27`, {
+        method: 'GET',
+        headers: {
+          'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const responseText = await response.text();
+      const data = JSON.parse(responseText);
+
+      if (data?.status === true) {
+        const formattedMethods = formatPaymentMethods(data?.data);
+        setPaymentMethods(formattedMethods);
+      } else {
+        Alert.alert('Error', 'Failed to fetch payment methods.');
+      }
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      Alert.alert('Error', 'An error occurred while fetching payment methods.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false); // Stop refreshing after data is fetched
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true); // Start refreshing
+    fetchPaymentMethods(); // Fetch payment methods again
+  };
 
   const formatPaymentMethods = (data) => {
     const formattedMethods = [];
@@ -345,7 +359,16 @@ const PaymentMethodsScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Header navigation={navigation} />
 
-      <ScrollView style={styles.paymentList}>
+      <ScrollView
+        style={styles.paymentList}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing} // Bind refreshing state
+            onRefresh={handleRefresh} // Bind refresh handler
+            colors={['#4a63ff']} // Customize the loading indicator color
+          />
+        }
+      >
         {loading ? (
           <ActivityIndicator size="large" color="#4a63ff" style={styles.loadingIndicator} />
         ) : (
