@@ -59,16 +59,15 @@ const NeoSportApp = ({ navigation }) => {
 
 
 
-
   const fetchData = async () => {
     setRefreshing(true);
     await fetchMatchCards();
+    await fetchMatchesFromNewAPI(); // Fetch matches from the new API
+  
     const logInDataString = await AsyncStorage.getItem('loginData');
     const logInData = logInDataString ? JSON.parse(logInDataString) : null;
     setIsLogInData(logInData);
-    console.log(logInData?.data?.id, "-----------");
-    // {"status":true,"message":"User logged in successfully!","data":{"id":72,"name":null,"username":null,"email":null,"email_verified_at":null,"phone_number":"8927179792","is_admin":0,"profile_image":null,"language":null,"description":null,"user_status":"active","created_at":"2025-03-16T11:34:11.000000Z","updated_at":"2025-03-16T11:34:11.000000Z"}} -----------
-    // Use logInData directly instead of isLoggedIn
+  
     if (logInData?.data?.id) {
       console.log("User is logged in, fetching assigned and unassigned match cards");
       await fetchAssignedMatchCards(logInData?.data?.id);
@@ -79,7 +78,40 @@ const NeoSportApp = ({ navigation }) => {
     setRefreshing(false);
   };
 
-
+  const fetchMatchesFromNewAPI = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('https://api.reddyanna.com/api/get-series-redis/2', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok && data.message === "Series Updated Successfully" && Array.isArray(data.data)) {
+        // Transform the data into a format suitable for your UI
+        const formattedMatches = data.data.flatMap((competition) =>
+          competition.match.map((match) => ({
+            id: match.event.id,
+            team1: { name: match.event.name.split(' v ')[0], logo: '' }, // Add a placeholder logo URL if needed
+            team2: { name: match.event.name.split(' v ')[1], logo: '' }, // Add a placeholder logo URL if needed
+            tournament: competition.competition.name,
+            countdown: new Date(match.event.openDate).toLocaleString(), // Format the date as needed
+          }))
+        );
+        setMatches(formattedMatches); // Update the matches state
+      } else {
+        Alert.alert('Error', 'Failed to fetch matches from the new API.');
+      }
+    } catch (error) {
+      console.error('Error fetching matches from the new API:', error);
+      Alert.alert('Error', 'An error occurred while fetching matches.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   useFocusEffect(
     useCallback(() => {
       fetchData();
@@ -271,7 +303,7 @@ const NeoSportApp = ({ navigation }) => {
         }
       >
   
-        {matches.map((match) => (
+        {matches.slice(0, 5).map((match) => (
           <View key={match.id} style={styles.match}>
             <View style={styles.team}>
               <Image source={{ uri: match.team1.logo }} style={styles.teamLogo1} />
