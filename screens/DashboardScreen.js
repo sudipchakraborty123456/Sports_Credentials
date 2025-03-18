@@ -81,7 +81,7 @@ const NeoSportApp = ({ navigation }) => {
   const fetchMatchesFromNewAPI = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('https://api.reddyanna.com/api/get-series-redis/2', {
+      const response = await fetch('https://api.reddyanna.com/api/get-series-redis/4', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ const NeoSportApp = ({ navigation }) => {
   
       const data = await response.json();
   
-      if (response.ok && data.message === "Series Updated Successfully" && Array.isArray(data.data)) {
+      if (response.ok&& Array.isArray(data.data)) {
         // Transform the data into a format suitable for your UI
         const formattedMatches = data.data.flatMap((competition) =>
           competition.match.map((match) => ({
@@ -181,8 +181,6 @@ const NeoSportApp = ({ navigation }) => {
   const fetchMatchCards = async () => {
     setIsLoading(true);
     try {
-      console.log('http://api.hatrickzone.com/api/games');
-
       const response = await fetch('http://api.hatrickzone.com/api/games', {
         method: 'GET',
         headers: {
@@ -306,7 +304,7 @@ const NeoSportApp = ({ navigation }) => {
         {matches.slice(0, 5).map((match) => (
           <View key={match.id} style={styles.match}>
             <View style={styles.team}>
-              <Image source={{ uri: match.team1.logo }} style={styles.teamLogo1} />
+              {/* <Image source={{ uri: match.team1.logo }} style={styles.teamLogo1} /> */}
               <Text>{match.team1.name}</Text>
             </View>
             <View style={styles.info}>
@@ -322,7 +320,7 @@ const NeoSportApp = ({ navigation }) => {
               </TouchableOpacity>
             </View>
             <View style={styles.team}>
-              <Image source={{ uri: match.team2.logo }} style={styles.teamLogo1} />
+              {/* <Image source={{ uri: match.team2.logo }} style={styles.teamLogo1} /> */}
               <Text>{match.team2.name}</Text>
             </View>
           </View>
