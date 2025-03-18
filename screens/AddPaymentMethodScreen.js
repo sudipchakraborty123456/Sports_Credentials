@@ -100,6 +100,34 @@ const PaymentRequest = ({ navigation }) => {
       setError('An error occurred while fetching bank accounts');
     }
   };
+  const handleDeleteWithdrawRequest = async (withdrawId) => {
+    try {
+      const formData = new FormData();
+      formData.append('user_id', userId);
+      formData.append('withdraw_id', withdrawId);
+
+      const response = await fetch(
+        'http://api.hatrickzone.com/api/delete-withdraw-request',
+        {
+          method: 'POST',
+          headers: {
+            'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+            'Content-Type': 'multipart/form-data',
+          },
+          body: formData,
+        }
+      );
+      const data = await response.json();
+      if (data.status) {
+        Alert.alert('Success', data.message);
+        fetchWithdrawRequests(); // Refresh withdraw requests
+      } else {
+        Alert.alert('Error', data.message || 'Failed to delete withdraw request');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'An error occurred while deleting the withdraw request');
+    }
+  };
   const fetchMyBankAccounts = async () => {
     try {
       const response = await fetch(
@@ -266,7 +294,47 @@ const PaymentRequest = ({ navigation }) => {
       fetchUserId();
     }, [])
   );
+  const handleWithdrawSubmit = async () => {
+    if (!platform || !amount || !paymentMethod) {
+      Alert.alert('Error', 'Please fill all fields.');
+      return;
+    }
 
+    if (parseFloat(amount) > 10000) {
+      Alert.alert('Error', 'Amount should be under 10,000.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('user_id', userId);
+    formData.append('game_id', platform);
+    formData.append('amount', amount);
+    formData.append('account_id', paymentMethod);
+
+    try {
+      const response = await fetch(
+        'http://api.hatrickzone.com/api/withdraw-request',
+        {
+          method: 'POST',
+          headers: {
+            'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+            'Content-Type': 'multipart/form-data',
+          },
+          body: formData,
+        }
+      );
+      const data = await response.json();
+      if (data.status) {
+        Alert.alert('Success', data.message);
+        setModalVisibleWithdraw(false);
+        fetchWithdrawRequests(); // Refresh withdraw requests
+      } else {
+        Alert.alert('Error', data.message || 'Failed to create withdraw request');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'An error occurred while submitting the request');
+    }
+  };
   // Fetch games and bank accounts when the modal is opened
   useEffect(() => {
     if (modalVisible && userId) {
@@ -275,7 +343,7 @@ const PaymentRequest = ({ navigation }) => {
     }
     if (modalVisibleWithdraw && userId) {
       fetchGames();
-      fetchBankAccounts();
+      fetchMyBankAccounts();
     }
   }, [modalVisible, modalVisibleWithdraw, userId]);
 
@@ -289,7 +357,34 @@ const PaymentRequest = ({ navigation }) => {
       }
     }
   }, [activeTab, userId]);
+  const handleDeleteDepositRequest = async (depositId) => {
+    try {
+      const formData = new FormData();
+      formData.append('user_id', userId);
+      formData.append('deposit_id', depositId);
 
+      const response = await fetch(
+        'http://api.hatrickzone.com/api/delete-deposit-request',
+        {
+          method: 'POST',
+          headers: {
+            'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+            'Content-Type': 'multipart/form-data',
+          },
+          body: formData,
+        }
+      );
+      const data = await response.json();
+      if (data.status) {
+        Alert.alert('Success', data.message);
+        fetchDepositRequests(); // Refresh deposit requests
+      } else {
+        Alert.alert('Error', data.message || 'Failed to delete deposit request');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'An error occurred while deleting the deposit request');
+    }
+  };
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -340,10 +435,7 @@ const PaymentRequest = ({ navigation }) => {
                     <Text style={styles.statusPending}>{request.status}</Text>
                   </View>
                   <View style={styles.actions}>
-                    <TouchableOpacity style={styles.viewBtn}>
-                      <Text>👁️</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteBtn}>
+                    <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteDepositRequest(request.deposit_id)}>
                       <Text>🗑️</Text>
                     </TouchableOpacity>
                   </View>
@@ -373,10 +465,7 @@ const PaymentRequest = ({ navigation }) => {
                     <Text style={styles.statusPending}>{request.status}</Text>
                   </View>
                   <View style={styles.actions}>
-                    <TouchableOpacity style={styles.viewBtn}>
-                      <Text>👁️</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteBtn}>
+                    <TouchableOpacity style={styles.deleteBtn}   onPress={() => handleDeleteWithdrawRequest(request.withdrawal_id)}>
                       <Text>🗑️</Text>
                     </TouchableOpacity>
                   </View>
@@ -496,6 +585,15 @@ const PaymentRequest = ({ navigation }) => {
               style={styles.picker}
             >
               <Picker.Item label="Choose payment method" value="" />
+              {/* Display Bank Transfer Payment Methods */}
+              {myBankAccounts['bank-transfer'] &&
+                myBankAccounts['bank-transfer'].map((bank) => (
+                  <Picker.Item
+                    key={bank.id}
+                    label={`Bank: ${bank.bank_name} (${bank.account_holder_name})`}
+                    value={bank.id}
+                  />
+                ))}
               {/* Display UPI Payment Methods */}
               {myBankAccounts.upi &&
                 myBankAccounts.upi.map((upi) => (
@@ -517,7 +615,7 @@ const PaymentRequest = ({ navigation }) => {
             </Picker>
 
             {/* Submit Button */}
-            <TouchableOpacity style={styles.submitBtn} onPress={handleDepositSubmit}>
+            <TouchableOpacity style={styles.submitBtn} onPress={handleWithdrawSubmit}>
               <Text style={styles.submitBtnText}>Send Request</Text>
             </TouchableOpacity>
           </View>

@@ -20,8 +20,6 @@ const BottomNav = ({ navigation, activeNav, setActiveNav }) => {
   const navItems = [
     { id: 'home', icon: 'home', text: 'Home' },
     ...(isLoggedIn ? [{ id: 'payment-method', icon: 'credit-card', text: 'Payment Method' }] : []),
-    // { id: 'payment-method', icon: 'credit-card', text: 'Payment Method' },
-    // Conditionally add 'AddPaymentMethod' if user is logged in
     ...(isLoggedIn ? [{ id: 'list', icon: 'format-list-bulleted', text: 'Add Payment' }] : []),
     { id: 'settings', icon: 'cog', text: 'Settings' },
   ];

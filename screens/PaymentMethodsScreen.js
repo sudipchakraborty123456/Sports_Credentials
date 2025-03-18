@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 const PaymentMethodsScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('bank-transfer');
@@ -33,8 +34,7 @@ const PaymentMethodsScreen = ({ navigation }) => {
   const [activeNav, setActiveNav] = useState('payment-method');
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [logInData, setIsLogInData] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userId, setUserId] = useState(null);
   const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
 
   const tabs = [
@@ -44,26 +44,37 @@ const PaymentMethodsScreen = ({ navigation }) => {
     { id: 'crypto', text: 'Crypto' },
   ];
 
-  useEffect(() => {
-    fetchLoginStatus();
-    fetchPaymentMethods();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserId();
 
-  const fetchLoginStatus = async () => {
+    }, [])
+  );
+  useEffect(() => {
+    if (userId) {
+      fetchPaymentMethods()
+    }
+  }, [userId]);
+
+  const fetchUserId = async () => {
     try {
-      const logedIn = await AsyncStorage.getItem('isLoggedIn');
-      setIsLoggedIn(logedIn === 'true');
-      const logInData = await AsyncStorage.getItem('loginData');
-      setIsLogInData(logInData ? JSON.parse(logInData) : null);
-    } catch (error) {
-      console.error('Error fetching login status or data:', error);
+      const logInDataString = await AsyncStorage.getItem('loginData');
+      const logInData = logInDataString ? JSON.parse(logInDataString) : null;
+      if (logInData && logInData.data.id) {
+        setUserId(logInData.data.id);
+      } else {
+        setError('User ID not found in login data');
+      }
+    } catch (err) {
+      setError('Failed to fetch user ID');
     }
   };
+
 
   const fetchPaymentMethods = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://api.hatrickzone.com/api/get-payment-details/27`, {
+      const response = await fetch(`http://api.hatrickzone.com/api/get-payment-details/${userId}`, {
         method: 'GET',
         headers: {
           'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
@@ -203,7 +214,7 @@ const PaymentMethodsScreen = ({ navigation }) => {
   const handleAddPaymentMethod = () => {
     let newPaymentMethod;
     let paymentData = {
-      user_id: logInData.data.id,
+      user_id: userId,
       payment_method: paymentType,
       bank_name: bankName,
       account_holder_name: accountHolderName,

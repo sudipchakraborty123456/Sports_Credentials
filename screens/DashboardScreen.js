@@ -121,7 +121,7 @@ const NeoSportApp = ({ navigation }) => {
 
   const handleGetCredentials = async (card) => {
     // Ensure isLoggedIn is a string and properly checked
-    if (isLoggedIn) {
+    if (logInData?.data?.id) {
       setIsLoading(true);
       try {
         console.log("game id:", card.game_id);
