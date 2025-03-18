@@ -3,6 +3,7 @@ import { View, ScrollView, Text, TextInput, TouchableOpacity, StyleSheet, Modal,
 import * as ImagePicker from 'expo-image-picker';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PaymentMethodsScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('bank-transfer');
@@ -20,6 +21,8 @@ const PaymentMethodsScreen = ({ navigation }) => {
   const [activeNav, setActiveNav] = useState('payment-method');
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [logInData, setIsLogInData] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const tabs = [
     { id: 'all', text: 'All' },
@@ -27,12 +30,28 @@ const PaymentMethodsScreen = ({ navigation }) => {
     { id: 'upi', text: 'UPI' },
     { id: 'crypto', text: 'Crypto' },
   ];
+  useEffect(() => {
+    const fetchLoginStatus = async () => {
+      try {
+        const logedIn = await AsyncStorage.getItem('isLoggedIn');
+        setIsLoggedIn(logedIn === 'true');
+        const logInData = await AsyncStorage.getItem('loginData');
+        setIsLogInData(logInData ? JSON.parse(logInData) : null);
+      } catch (error) {
+        console.error('Error fetching login status or data:', error);
+      }
+    };
 
+    fetchLoginStatus();
+    // fetchData(); 
+  }, []);
   useEffect(() => {
     const fetchPaymentMethods = async () => {
       setLoading(true);
       try {
-        const response = await fetch('http://api.hatrickzone.com/api/get-payment-details/77', {
+        console.log(logInData.data.id);
+        
+        const response = await fetch(`http://api.hatrickzone.com/api/get-payment-details/27`, {
           method: 'GET',
           headers: {
             'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
@@ -44,8 +63,8 @@ const PaymentMethodsScreen = ({ navigation }) => {
 
         const data = JSON.parse(responseText);
 
-        if (data.status === true) {
-          const formattedMethods = formatPaymentMethods(data.data);
+        if (data?.status === true) {
+          const formattedMethods = formatPaymentMethods(data?.data);
           setPaymentMethods(formattedMethods);
         } else {
           Alert.alert('Error', 'Failed to fetch payment methods.');
@@ -170,7 +189,7 @@ const PaymentMethodsScreen = ({ navigation }) => {
   const handleAddPaymentMethod = () => {
     let newPaymentMethod;
     let paymentData = {
-      user_id: '77',
+      user_id: logInData.data.id,
       payment_method: paymentType,
       bank_name: bankName,
       account_holder_name: accountHolderName,

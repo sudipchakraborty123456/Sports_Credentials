@@ -10,9 +10,10 @@ import {
   Linking,
   Alert,
   ActivityIndicator,
+  RefreshControl, // Import RefreshControl
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import axios from 'axios'; // Import axios for API calls
+import axios from 'axios';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,23 +25,27 @@ const NeoSportApp = ({ navigation }) => {
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [logInData, setIsLogInData] = useState(null);
   const [matchCards, setMatchCards] = useState([]);
   const [assignMatchCards, setAssignMatchCards] = useState([]);
-  const [matches, setMatches] = useState([{
-    id: 1,
-    team1: { name: 'AUS', logo: 'https://city-png.b-cdn.net/preview/preview_public/uploads/preview/australia-sport-cricket-team-logo-hd-transparent-png-701751712502591qatlzstlo8.png' },
-    team2: { name: 'AUS', logo: 'https://banner2.cleanpng.com/lnd/20250108/ah/7526db520fe5c594dfebe519cd0ab5.webp' },
-    tournament: 'T20 World Cup',
-    countdown: '22h: 19m: 12s',
-  },
-  {
-    id: 2,
-    team1: { name: 'RCB', logo: 'https://banner2.cleanpng.com/lnd/20250107/gp/8381e7ef2caab7674871267dde56a3.webp' },
-    team2: { name: 'CSK', logo: 'https://banner2.cleanpng.com/20190220/ws/kisspng-logo-chennai-illustration-graphic-design-brand-1713906525653.webp' },
-    tournament: 'Indian Premier League',
-    countdown: '22h: 19m: 12s',
-  },]); // State for matches
+  const [matches, setMatches] = useState([
+    {
+      id: 1,
+      team1: { name: 'AUS', logo: 'https://city-png.b-cdn.net/preview/preview_public/uploads/preview/australia-sport-cricket-team-logo-hd-transparent-png-701751712502591qatlzstlo8.png' },
+      team2: { name: 'AUS', logo: 'https://banner2.cleanpng.com/lnd/20250108/ah/7526db520fe5c594dfebe519cd0ab5.webp' },
+      tournament: 'T20 World Cup',
+      countdown: '22h: 19m: 12s',
+    },
+    {
+      id: 2,
+      team1: { name: 'RCB', logo: 'https://banner2.cleanpng.com/lnd/20250107/gp/8381e7ef2caab7674871267dde56a3.webp' },
+      team2: { name: 'CSK', logo: 'https://banner2.cleanpng.com/20190220/ws/kisspng-logo-chennai-illustration-graphic-design-brand-1713906525653.webp' },
+      tournament: 'Indian Premier League',
+      countdown: '22h: 19m: 12s',
+    },
+  ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false); // State for refresh control
 
   const tabs = [
     { id: 'cricket', icon: '🏏', text: 'Cricket' },
@@ -52,11 +57,84 @@ const NeoSportApp = ({ navigation }) => {
   ];
 
   useEffect(() => {
-    const logedIn = AsyncStorage.getItem('isLoggedIn');
-    setIsLoggedIn(logedIn);
-    fetchMatchCards();
-    fetchAssignedMatchCards();
+    const fetchLoginStatus = async () => {
+      try {
+        const logedIn = await AsyncStorage.getItem('isLoggedIn');
+        setIsLoggedIn(logedIn === 'true');
+        const logInData = await AsyncStorage.getItem('loginData');
+        setIsLogInData(logInData ? JSON.parse(logInData) : null);
+      } catch (error) {
+        console.error('Error fetching login status or data:', error);
+      }
+    };
+
+    fetchLoginStatus();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    await fetchMatchCards();
+    await fetchAssignedMatchCards();
+  };
+  const handleGetCredentials = async (card) => {
+    // Ensure isLoggedIn is a string and properly checked
+    if (isLoggedIn) {
+      setIsLoading(true);
+      try {
+        console.log("game id:", card.game_id);
+
+        // Create a FormData object
+        const formData = new FormData();
+        formData.append('user_id', logInData.data.id); // Add user_id
+        formData.append('game_id', card.game_id); // Add game_id
+
+        const response = await axios.post(
+          'http://api.hatrickzone.com/api/request-assign-game',
+          formData, // Use the FormData object as the request body
+          {
+            headers: {
+              'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+              'Content-Type': 'multipart/form-data', // Set the content type to multipart/form-data
+            },
+          }
+        );
+
+        const data = response.data;
+
+        if (data.status === true) {
+          // Success: Set credentials and show modal
+          setSelectedMatch({
+            ...card,
+            userName: data.data.username,
+            password: data.data.password,
+            // login_link: data.data.login_link || 'http://example.com', // Replace with the actual login link if available
+          });
+          setModalVisible(true);
+        } else {
+          // Failure: Show error message
+          Alert.alert('Error', data.message || 'Failed to fetch credentials.');
+        }
+      } catch (error) {
+        console.error('Error fetching credentials:', error);
+        Alert.alert('Error', 'An error occurred while fetching credentials.');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Redirect to Login if not logged in
+      navigation.navigate('Login');
+    }
+  };
+
+  const openWebsite = async (url) => {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url); // Open the URL in the browser
+    } else {
+      Alert.alert(`Don't know how to open this URL: ${url}`);
+    }
+  };
+
   const fetchMatchCards = async () => {
     setIsLoading(true);
     try {
@@ -70,23 +148,26 @@ const NeoSportApp = ({ navigation }) => {
 
       const data = await response.json();
 
-      if (response.ok && data.status === 'success' && Array.isArray(data.data)) {
+      if (response.ok && data.success == true && Array.isArray(data.data)) {
         setMatchCards(data.data);
       } else {
-        Alert.alert('Error', 'Failed to fetch match cards or invalid data format.');
+        Alert.alert('Error', 'Failed to fetch match cards or invalid data format for all game.');
       }
     } catch (error) {
       console.error('Error fetching match cards:', error);
-      Alert.alert('Error',error,);
+      Alert.alert('Error', error);
     } finally {
       setIsLoading(false);
+      setRefreshing(false); // Stop refreshing
     }
   };
 
   const fetchAssignedMatchCards = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://api.hatrickzone.com/api/assigned-user-games/77', {
+      console.log(logInData.data.id,"---------");
+      
+      const response = await fetch(`http://api.hatrickzone.com/api/assigned-user-games/${logInData.data.id}`, {
         method: 'GET',
         headers: {
           'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
@@ -99,66 +180,21 @@ const NeoSportApp = ({ navigation }) => {
       if (response.ok && data.status === true && Array.isArray(data.data)) {
         setAssignMatchCards(data.data);
       } else {
-        Alert.alert('Error', 'Failed to fetch match cards or invalid data format.');
+        Alert.alert('Error', 'Failed to fetch match cards or invalid data format .');
       }
     } catch (error) {
       console.error('Error fetching match cards:', error);
       Alert.alert('Error', 'An error occurred while fetching match cards.');
     } finally {
       setIsLoading(false);
-    }
-  };
-  const openWebsite = async (url) => {
-    const supported = await Linking.canOpenURL(url);
-    if (supported) {
-      await Linking.openURL(url); // Open the URL in the browser
-    } else {
-      Alert.alert(`Don't know how to open this URL: ${url}`);
+      setRefreshing(false); 
     }
   };
 
-  // Handle "Get Credentials" button click
-  const handleGetCredentials = async (card) => {
-    if (!isLoggedIn) {
-      navigation.navigate('Login');
-    } else {
-      setIsLoading(true);
-      try {
-        console.log("game id:", card.id);
-
-        const response = await axios.post('http://api.hatrickzone.com/api/request-assign-game', {
-          user_id: '77', // Replace with the actual user ID
-          game_id: card.id, // Use the game_id from the selected card
-        }, {
-          headers: {
-            'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const data = response.data;
-
-        if (data.status == true) {
-          setSelectedMatch({
-            ...card,
-            userName: data.data.username,
-            password: data.data.password,
-            // login_link: data.data.login_link || 'http://example.com', // Replace with the actual login link if available
-          });
-          setModalVisible(true);
-        } else {
-          Alert.alert('Error', data.message || 'Failed to fetch credentials.');
-        }
-      } catch (error) {
-        console.error('Error fetching credentials:', error);
-        Alert.alert('Error', 'An error occurred while fetching credentials.');
-      } finally {
-        setIsLoading(false);
-      }
-    }
+  const onRefresh = () => {
+    setRefreshing(true); 
+    fetchData(); 
   };
-
-  // Rest of the component code...
 
   return (
     <View style={styles.container}>
@@ -181,8 +217,17 @@ const NeoSportApp = ({ navigation }) => {
         </ScrollView>
       </View>
 
-      {/* Match List */}
-      <ScrollView style={styles.liveList}>
+      {/* Match List with RefreshControl */}
+      <ScrollView
+        style={styles.liveList}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing} // Bind refreshing state
+            onRefresh={onRefresh} // Bind refresh function
+            colors={['#4a63ff']} // Customize refresh spinner color
+          />
+        }
+      >
         {matches.map((match) => (
           <View key={match.id} style={styles.match}>
             <View style={styles.team}>
@@ -195,7 +240,7 @@ const NeoSportApp = ({ navigation }) => {
               <Text style={styles.countdown}>{match.countdown}</Text>
               <TouchableOpacity
                 style={styles.liveButton}
-                onPress={() => handleLiveStream(match.id)} // Pass the eventid (match.id) here
+                onPress={() => handleLiveStream(match.id)}
               >
                 <Text style={styles.liveButtonText}>Live</Text>
                 <View style={styles.liveIcon} />
@@ -216,9 +261,9 @@ const NeoSportApp = ({ navigation }) => {
               <ActivityIndicator size="large" color="#4a63ff" />
             ) : (
               matchCards.map((card) => (
-                <View key={card.id} style={styles.matchCard}>
+                <View key={card.game_id} style={styles.matchCard}>
                   <View style={styles.teamBox}>
-                    <Image source={{ uri: `https://www.allpanelpro.com/${card.logo}` }} style={styles.teamLogo} />
+                    <Image source={{ uri: card.game_logo }} style={styles.teamLogo} />
                     <Text>{card.name}</Text>
                   </View>
                   <TouchableOpacity style={styles.liveButton} onPress={() => handleGetCredentials(card)}>
@@ -241,7 +286,7 @@ const NeoSportApp = ({ navigation }) => {
               assignMatchCards.map((card) => (
                 <View key={card.game_id} style={styles.matchCard}>
                   <View style={styles.teamBox}>
-                    <Image source={{ uri: `${card.game_logo}` }} style={styles.teamLogo} />
+                    <Image source={{ uri: card.game_logo }} style={styles.teamLogo} />
                     <Text>{card.game_name}</Text>
                     {/* Display Username and Password */}
                     <View style={styles.credentialsContainer}>
