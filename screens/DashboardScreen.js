@@ -29,45 +29,27 @@ const NeoSportApp = ({ navigation }) => {
   const [logInData, setIsLogInData] = useState(null);
   const [matchCards, setMatchCards] = useState([]);
   const [assignMatchCards, setAssignMatchCards] = useState([]);
-  const [matches, setMatches] = useState([
-    {
-      id: 1,
-      team1: { name: 'AUS', logo: 'https://city-png.b-cdn.net/preview/preview_public/uploads/preview/australia-sport-cricket-team-logo-hd-transparent-png-701751712502591qatlzstlo8.png' },
-      team2: { name: 'AUS', logo: 'https://banner2.cleanpng.com/lnd/20250108/ah/7526db520fe5c594dfebe519cd0ab5.webp' },
-      tournament: 'T20 World Cup',
-      countdown: '22h: 19m: 12s',
-    },
-    {
-      id: 2,
-      team1: { name: 'RCB', logo: 'https://banner2.cleanpng.com/lnd/20250107/gp/8381e7ef2caab7674871267dde56a3.webp' },
-      team2: { name: 'CSK', logo: 'https://banner2.cleanpng.com/20190220/ws/kisspng-logo-chennai-illustration-graphic-design-brand-1713906525653.webp' },
-      tournament: 'Indian Premier League',
-      countdown: '22h: 19m: 12s',
-    },
-  ]);
+  const [matches, setMatches] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false); // State for refresh control
 
   const tabs = [
     { id: 'cricket', icon: '🏏', text: 'Cricket' },
-    { id: 'basketball', icon: '🏀', text: 'Basketball' },
     { id: 'football', icon: '⚽', text: 'Football' },
-    { id: 'baseball', icon: '⚾', text: 'Baseball' },
-    { id: 'ball', icon: '⚾', text: 'Ball' },
-    { id: 'hockey', icon: '🏏', text: 'Hockey' },
+    { id: 'tennis ', icon: '⚾', text: 'Tennis ' },
   ];
 
 
 
   const fetchData = async () => {
     setRefreshing(true);
-    await fetchMatchCards();
+    // await fetchMatchCards();
     await fetchMatchesFromNewAPI(); // Fetch matches from the new API
-  
+
     const logInDataString = await AsyncStorage.getItem('loginData');
     const logInData = logInDataString ? JSON.parse(logInDataString) : null;
     setIsLogInData(logInData);
-  
+
     if (logInData?.data?.id) {
       console.log("User is logged in, fetching assigned and unassigned match cards");
       await fetchAssignedMatchCards(logInData?.data?.id);
@@ -77,7 +59,6 @@ const NeoSportApp = ({ navigation }) => {
     }
     setRefreshing(false);
   };
-
   const fetchMatchesFromNewAPI = async () => {
     setIsLoading(true);
     try {
@@ -89,29 +70,71 @@ const NeoSportApp = ({ navigation }) => {
       });
   
       const data = await response.json();
+      console.log('API Response:', data);
   
-      if (response.ok&& Array.isArray(data.data)) {
-        // Transform the data into a format suitable for your UI
+      if (response.ok && data?.data && Array.isArray(data.data)) {
         const formattedMatches = data.data.flatMap((competition) =>
-          competition.match.map((match) => ({
-            id: match.event.id,
-            team1: { name: match.event.name.split(' v ')[0], logo: '' }, // Add a placeholder logo URL if needed
-            team2: { name: match.event.name.split(' v ')[1], logo: '' }, // Add a placeholder logo URL if needed
-            tournament: competition.competition.name,
-            countdown: new Date(match.event.openDate).toLocaleString(), // Format the date as needed
-          }))
+          (competition.match || []).map((match) => {
+            const [team1Name = '', team2Name = ''] = match.event?.name?.split(' v ') || [];
+            return {
+              id: match.event?.id,
+              team1: { name: team1Name, logo: '' },
+              team2: { name: team2Name, logo: '' },
+              tournament: competition.competition?.name || 'Unknown Tournament',
+              countdown: new Intl.DateTimeFormat('en-GB', {
+                dateStyle: 'short',
+                timeStyle: 'short',
+              }).format(new Date(match.event?.openDate)),
+            };
+          })
         );
-        setMatches(formattedMatches); // Update the matches state
+  
+        setMatches(formattedMatches);
       } else {
+        console.log('Failed to fetch matches:', data);
         Alert.alert('Error', 'Failed to fetch matches from the new API.');
       }
     } catch (error) {
-      console.error('Error fetching matches from the new API:', error);
-      Alert.alert('Error', 'An error occurred while fetching matches.');
+      console.error('Error fetching matches:', error.message);
+      Alert.alert('Error', `An error occurred while fetching matches: ${error.message}`);
     } finally {
       setIsLoading(false);
-    }
-  };
+}
+};
+  // const fetchMatchesFromNewAPI = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const response = await fetch('https://api.reddyanna.com/api/get-series-redis/4', {
+  //       method: 'GET',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //     });
+
+  //     const data = await response.json();
+
+  //     if (response.ok && Array.isArray(data.data)) {
+  //       // Transform the data into a format suitable for your UI
+  //       const formattedMatches = data.data.flatMap((competition) =>
+  //         competition.match.map((match) => ({
+  //           id: match.event.id,
+  //           team1: { name: match.event.name.split(' v ')[0], logo: '' }, // Add a placeholder logo URL if needed
+  //           team2: { name: match.event.name.split(' v ')[1], logo: '' }, // Add a placeholder logo URL if needed
+  //           tournament: competition.competition.name,
+  //           countdown: new Date(match.event.openDate).toLocaleString(), // Format the date as needed
+  //         }))
+  //       );
+  //       setMatches(formattedMatches); // Update the matches state
+  //     } else {
+  //       Alert.alert('Error', 'Failed to fetch matches from the new API.');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching matches from the new API:', error);
+  //     Alert.alert('Error', 'An error occurred while fetching matches.');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
   useFocusEffect(
     useCallback(() => {
       fetchData();
@@ -300,31 +323,40 @@ const NeoSportApp = ({ navigation }) => {
           />
         }
       >
-  
-        {matches.slice(0, 5).map((match) => (
-          <View key={match.id} style={styles.match}>
-            <View style={styles.team}>
-              {/* <Image source={{ uri: match.team1.logo }} style={styles.teamLogo1} /> */}
-              <Text>{match.team1.name}</Text>
+
+        {
+          matches.slice(0, 5).map((match) => (
+            <View key={match.id} style={styles.card}>
+              <View style={styles.cardContent}>
+                {/* Team 1 */}
+                <View style={styles.team}>
+                  {/* <Image source={{ uri: match.team1.logo }} style={styles.teamLogo} /> */}
+                  <Text style={styles.teamName}>{match.team1.name}</Text>
+                </View>
+
+                {/* Match Info */}
+                <View style={styles.matchInfo}>
+                  <Text style={styles.tournament}>{match.tournament}</Text>
+                  <Text style={styles.vsText}>V/S</Text>
+                  <Text style={styles.countdown}>{match.countdown}</Text>
+                  <TouchableOpacity
+                    style={styles.liveButton}
+                    onPress={() => handleLiveStream(match.id)}
+                  >
+                    <Text style={styles.liveButtonText}>Live Stream</Text>
+                    <View style={styles.liveIcon} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Team 2 */}
+                <View style={styles.team}>
+                  {/* <Image source={{ uri: match.team2.logo }} style={styles.teamLogo} /> */}
+                  <Text style={styles.teamName}>{match.team2.name}</Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.info}>
-              <Text>{match.tournament}</Text>
-              <Text>V/S</Text>
-              <Text style={styles.countdown}>{match.countdown}</Text>
-              <TouchableOpacity
-                style={styles.liveButton}
-                onPress={() => handleLiveStream(match.id)}
-              >
-                <Text style={styles.liveButtonText}>Live</Text>
-                <View style={styles.liveIcon} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.team}>
-              {/* <Image source={{ uri: match.team2.logo }} style={styles.teamLogo1} /> */}
-              <Text>{match.team2.name}</Text>
-            </View>
-          </View>
-        ))}
+          ))
+        }
 
         {/* Match Cards */}
         <Text style={styles.sectionHeader}>Not Assigned</Text>
@@ -515,7 +547,7 @@ const styles = StyleSheet.create({
   teamLogo1: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    // borderRadius: 25,
   },
   info: {
     alignItems: 'center',
@@ -670,6 +702,78 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+
+
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  team: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  teamLogo: {
+    width: 100,
+    height: 50,
+    // borderRadius: 25,
+    marginBottom: 8,
+  },
+  teamName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  matchInfo: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  tournament: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  vsText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#374151',
+    marginVertical: 8,
+  },
+  countdown: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 8,
+  },
+  liveButton: {
+    backgroundColor: '#3b82f6',
+    padding: 8,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  liveButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  liveIcon: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'red',
   },
 });
 

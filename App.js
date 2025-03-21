@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { StatusBar } from 'react-native'; // Import StatusBar
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -39,57 +40,61 @@ const App = () => {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName={isOnboardingComplete ? 'Splash' : 'Onboarding1'}>
-        {/* Onboarding Screens */}
-        <Stack.Screen
-          name="Onboarding1"
-          component={OnboardingScreen1}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Onboarding2"
-          component={OnboardingScreen2}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Onboarding3"
-          component={OnboardingScreen3}
-          options={{ headerShown: false }}
-        />
+    <>
+      {/* Set the status bar style */}
+      {/* <StatusBar barStyle="dark-content" backgroundColor="#ffffff" /> Adjust as needed */}
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName={isOnboardingComplete ? 'Splash' : 'Onboarding1'}>
+          {/* Onboarding Screens */}
+          <Stack.Screen
+            name="Onboarding1"
+            component={OnboardingScreen1}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Onboarding2"
+            component={OnboardingScreen2}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Onboarding3"
+            component={OnboardingScreen3}
+            options={{ headerShown: false }}
+          />
 
-        {/* Existing Screens */}
-        <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }} />
-        <Stack.Screen
-          name="SportsWebsites"
-          component={SportsWebsitesScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="EditProfile"
-          component={EditProfileScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="PaymentMethods"
-          component={PaymentMethodsScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AddPaymentMethod"
-          component={AddPaymentMethodScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="WithdrawRequest"
-          component={WithdrawRequestScreen}
-          options={{ headerShown: false }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+          {/* Existing Screens */}
+          <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="SportsWebsites"
+            component={SportsWebsitesScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="PaymentMethods"
+            component={PaymentMethodsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="AddPaymentMethod"
+            component={AddPaymentMethodScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="WithdrawRequest"
+            component={WithdrawRequestScreen}
+            options={{ headerShown: false }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </>
   );
 };
 

@@ -10,7 +10,7 @@ import {
   Alert,
   Image,
   ActivityIndicator,
-  RefreshControl, // Added for pull-to-refresh
+  RefreshControl,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Header from '../components/Header';
@@ -35,7 +35,7 @@ const PaymentMethodsScreen = ({ navigation }) => {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
 
   const tabs = [
     { id: 'all', text: 'All' },
@@ -47,12 +47,12 @@ const PaymentMethodsScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       fetchUserId();
-
     }, [])
   );
+
   useEffect(() => {
     if (userId) {
-      fetchPaymentMethods()
+      fetchPaymentMethods();
     }
   }, [userId]);
 
@@ -63,13 +63,12 @@ const PaymentMethodsScreen = ({ navigation }) => {
       if (logInData && logInData.data.id) {
         setUserId(logInData.data.id);
       } else {
-        setError('User ID not found in login data');
+        Alert.alert('Error', 'User ID not found in login data');
       }
     } catch (err) {
-      setError('Failed to fetch user ID');
+      Alert.alert('Error', 'Failed to fetch user ID');
     }
   };
-
 
   const fetchPaymentMethods = async () => {
     setLoading(true);
@@ -96,13 +95,13 @@ const PaymentMethodsScreen = ({ navigation }) => {
       Alert.alert('Error', 'An error occurred while fetching payment methods.');
     } finally {
       setLoading(false);
-      setRefreshing(false); // Stop refreshing after data is fetched
+      setRefreshing(false);
     }
   };
 
   const handleRefresh = () => {
-    setRefreshing(true); // Start refreshing
-    fetchPaymentMethods(); // Fetch payment methods again
+    setRefreshing(true);
+    fetchPaymentMethods();
   };
 
   const formatPaymentMethods = (data) => {
@@ -158,129 +157,6 @@ const PaymentMethodsScreen = ({ navigation }) => {
     if (!result.cancelled) {
       setUpiQRCode(result.assets[0].uri);
     }
-  };
-
-  const savePaymentDetails = async (paymentData) => {
-    setLoading(true);
-    try {
-      const formData = new FormData();
-
-      formData.append('user_id', paymentData.user_id);
-      formData.append('payment_method', paymentData.payment_method);
-      formData.append('bank_name', paymentData.bank_name);
-      formData.append('account_number', paymentData.account_number);
-      formData.append('account_holder_name', paymentData.account_holder_name);
-      formData.append('iban_number', paymentData.iban_number);
-      formData.append('branch_name', paymentData.branch_name);
-      formData.append('crypto_wallet', paymentData.crypto_wallet);
-      formData.append('upi_number', paymentData.upi_number);
-      formData.append('ifc_number', paymentData.ifc_number);
-
-      if (paymentData.upi_qr_code) {
-        formData.append('upi_qr_code', {
-          uri: paymentData.upi_qr_code,
-          name: 'upi_qr_code.jpg',
-          type: 'image/jpeg',
-        });
-      }
-
-      const response = await fetch('http://api.hatrickzone.com/api/save-payment-details', {
-        method: 'POST',
-        headers: {
-          'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
-        },
-        body: formData,
-      });
-
-      const responseText = await response.text();
-      console.log('API Response Text:', responseText);
-
-      const data = JSON.parse(responseText);
-      console.log('API Response Data:', data);
-
-      if (data.status === true) {
-        Alert.alert('Success', 'Payment details saved successfully!');
-      } else {
-        Alert.alert('Error', 'Failed to save payment details.');
-      }
-    } catch (error) {
-      console.error('Error saving payment details:', error);
-      Alert.alert('Error', `An error occurred while saving payment details: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddPaymentMethod = () => {
-    let newPaymentMethod;
-    let paymentData = {
-      user_id: userId,
-      payment_method: paymentType,
-      bank_name: bankName,
-      account_holder_name: accountHolderName,
-      account_number: accountNumber,
-      ifc_number: ifscCode,
-      upi_number: upiNumber,
-      crypto_wallet: cryptoWalletAddress,
-      upi_qr_code: upiQRCode,
-    };
-
-    switch (paymentType) {
-      case 'bank-transfer':
-        if (!bankName || !accountHolderName || !accountNumber || !ifscCode) {
-          Alert.alert('Error', 'Please fill in all fields for Bank Transfer.');
-          return;
-        }
-        newPaymentMethod = {
-          id: String(paymentMethods.length + 1),
-          type: 'Bank Transfer',
-          details: `Bank: ${bankName}, A/C: ${accountNumber.slice(-4)}`,
-        };
-        break;
-      case 'upi':
-        if (!accountHolderName || !upiNumber) {
-          Alert.alert('Error', 'Please fill in all fields for UPI.');
-          return;
-        }
-        newPaymentMethod = {
-          id: String(paymentMethods.length + 1),
-          type: 'UPI',
-          details: `UPI ID: ${upiNumber}`,
-        };
-        break;
-      case 'crypto':
-        if (!accountHolderName || !cryptoWalletAddress) {
-          Alert.alert('Error', 'Please fill in all fields for Crypto.');
-          return;
-        }
-        newPaymentMethod = {
-          id: String(paymentMethods.length + 1),
-          type: 'Crypto',
-          details: `Wallet: ${cryptoWalletAddress.slice(0, 6)}...${cryptoWalletAddress.slice(-4)}`,
-        };
-        break;
-      default:
-        Alert.alert('Error', 'Please select a payment type.');
-        return;
-    }
-
-    setPaymentMethods([...paymentMethods, newPaymentMethod]);
-    savePaymentDetails(paymentData);
-
-    setModalVisible(false);
-    setBankName('');
-    setAccountHolderName('');
-    setAccountNumber('');
-    setIfscCode('');
-    setUpiNumber('');
-    setUpiQRCode(null);
-    setCryptoWalletAddress('');
-    setCryptoQRCode(null);
-  };
-
-  const handleViewDetails = (payment) => {
-    setSelectedPayment(payment);
-    setModalVisible(true);
   };
 
   const renderPaymentForm = () => {
@@ -366,35 +242,225 @@ const PaymentMethodsScreen = ({ navigation }) => {
     }
   };
 
+  const savePaymentDetails = async (paymentData) => {
+    setLoading(true);
+    try {
+      const formData = new FormData();
+
+      formData.append('user_id', paymentData.user_id);
+      formData.append('payment_method', paymentData.payment_method);
+      formData.append('bank_name', paymentData.bank_name);
+      formData.append('account_number', paymentData.account_number);
+      formData.append('account_holder_name', paymentData.account_holder_name);
+      formData.append('ifc_number', paymentData.ifc_number);
+      formData.append('upi_number', paymentData.upi_number);
+      formData.append('crypto_wallet', paymentData.crypto_wallet);
+
+      if (paymentData.upi_qr_code) {
+        formData.append('upi_qr_code', {
+          uri: paymentData.upi_qr_code,
+          name: 'upi_qr_code.jpg',
+          type: 'image/jpeg',
+        });
+      }
+
+      const response = await fetch('http://api.hatrickzone.com/api/save-payment-details', {
+        method: 'POST',
+        headers: {
+          'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+        },
+        body: formData,
+      });
+
+      const responseText = await response.text();
+      const data = JSON.parse(responseText);
+
+      if (data.status === true) {
+        Alert.alert('Success', 'Payment details saved successfully!');
+        fetchPaymentMethods(); // Refresh the list
+      } else {
+        Alert.alert('Error', 'Failed to save payment details.');
+      }
+    } catch (error) {
+      console.error('Error saving payment details:', error);
+      Alert.alert('Error', `An error occurred while saving payment details: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddPaymentMethod = () => {
+    let paymentData = {
+      user_id: userId,
+      payment_method: paymentType,
+      bank_name: bankName,
+      account_holder_name: accountHolderName,
+      account_number: accountNumber,
+      ifc_number: ifscCode,
+      upi_number: upiNumber,
+      crypto_wallet: cryptoWalletAddress,
+      upi_qr_code: upiQRCode,
+    };
+
+    savePaymentDetails(paymentData);
+    setModalVisible(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setBankName('');
+    setAccountHolderName('');
+    setAccountNumber('');
+    setIfscCode('');
+    setUpiNumber('');
+    setUpiQRCode(null);
+    setCryptoWalletAddress('');
+    setCryptoQRCode(null);
+  };
+
+  const handleDeletePayment = async (id) => {
+    Alert.alert('Delete Payment', 'Are you sure you want to delete this payment method?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setLoading(true);
+          try {
+            const response = await fetch('http://api.hatrickzone.com/api/delete-payment-details', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+              },
+              body: JSON.stringify({
+                user_id: userId,
+                id: id,
+              }),
+            });
+
+            const responseText = await response.text();
+            const data = JSON.parse(responseText);
+
+            if (data?.status === true) {
+              // Remove the deleted payment method from the local state
+              setPaymentMethods(paymentMethods.filter((payment) => payment.id !== id));
+              Alert.alert('Success', 'Payment method deleted successfully!');
+            } else {
+              Alert.alert('Error', 'Failed to delete payment method.');
+            }
+          } catch (error) {
+            console.error('Error deleting payment method:', error);
+            Alert.alert('Error', 'An error occurred while deleting the payment method.');
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
       <Header navigation={navigation} />
 
       <ScrollView
-        style={styles.paymentList}
+        style={styles.liveList}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing} // Bind refreshing state
-            onRefresh={handleRefresh} // Bind refresh handler
-            colors={['#4a63ff']} // Customize the loading indicator color
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#4a63ff']}
           />
         }
       >
         {loading ? (
           <ActivityIndicator size="large" color="#4a63ff" style={styles.loadingIndicator} />
         ) : (
-          <View style={styles.paymentRow}>
-            {paymentMethods.map((payment) => (
-              <TouchableOpacity
-                key={payment.id}
-                style={styles.paymentCard}
-                onPress={() => handleViewDetails(payment)}
-              >
-                <Text style={styles.paymentType}>{payment.type}</Text>
-                <Text style={styles.paymentDetails}>{payment.details}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <>
+            {/* Bank Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Bank</Text>
+              <View style={styles.cardList}>
+                {paymentMethods
+                  .filter((payment) => payment.type === 'Bank Transfer')
+                  .map((payment) => (
+                    <View key={payment.id} style={styles.card}>
+                      <Text style={styles.cardTitle}>
+                        Account Holder: <Text style={styles.link}>{payment.account_holder_name}</Text>
+                      </Text>
+                      <View style={styles.cardItem}>
+                        <Text>Bank Name:</Text>
+                        <Text>{payment.details.split(',')[0].replace('Bank: ', '')}</Text>
+                      </View>
+                      <View style={styles.cardItem}>
+                        <Text>Account #:</Text>
+                        <Text>{payment.details.split(',')[1].replace(' A/C: ', '')}</Text>
+                      </View>
+                      <View style={styles.cardItem}>
+                        <Text>IFSC No:</Text>
+                        <Text>{payment.details.split(',')[2]?.replace(' IFSC: ', '') || 'N/A'}</Text>
+                      </View>
+                      <View style={styles.actions}>
+                        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeletePayment(payment.id)}>
+                          <Text>🗑️ Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+              </View>
+            </View>
+
+            {/* UPI Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>UPI</Text>
+              <View style={styles.cardList}>
+                {paymentMethods
+                  .filter((payment) => payment.type === 'UPI')
+                  .map((payment) => (
+                    <View key={payment.id} style={styles.card}>
+                      <Text style={styles.cardTitle}>
+                        Account Holder: <Text style={styles.link}>{payment.account_holder_name}</Text>
+                      </Text>
+                      <View style={styles.cardItem}>
+                        <Text>UPI ID:</Text>
+                        <Text>{payment.details.replace('UPI ID: ', '')}</Text>
+                      </View>
+                      <View style={styles.actions}>
+                        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeletePayment(payment.id)}>
+                          <Text>🗑️ Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+              </View>
+            </View>
+
+            {/* Crypto Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Crypto</Text>
+              <View style={styles.cardList}>
+                {paymentMethods
+                  .filter((payment) => payment.type === 'Crypto')
+                  .map((payment) => (
+                    <View key={payment.id} style={styles.card}>
+                      <Text style={styles.cardTitle}>
+                        Account Holder: <Text style={styles.link}>{payment.account_holder_name}</Text>
+                      </Text>
+                      <View style={styles.cardItem}>
+                        <Text>Crypto Wallet:</Text>
+                        <Text>{payment.details.replace('Wallet: ', '')}</Text>
+                      </View>
+                      <View style={styles.actions}>
+                        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeletePayment(payment.id)}>
+                          <Text>🗑️ Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+              </View>
+            </View>
+          </>
         )}
       </ScrollView>
 
@@ -452,53 +518,65 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f4f4f4',
   },
-  tabs: {
-    backgroundColor: 'white',
-    paddingVertical: 10,
-  },
-  tab: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    opacity: 0.6,
-  },
-  activeTab: {
-    opacity: 1,
-    borderBottomWidth: 2,
-    borderBottomColor: '#4a63ff',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  paymentList: {
+  liveList: {
     flex: 1,
-    paddingHorizontal: 10,
-    marginTop: 10,
+    padding: 10,
+    paddingBottom: 70, // Space for bottom navigation
   },
-  paymentRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  section: {
+    marginBottom: 24,
   },
-  paymentCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 15,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  cardList: {
+    gap: 16,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
     borderRadius: 8,
-    marginBottom: 10,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 2,
   },
-  paymentType: {
+  cardTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
   },
-  paymentDetails: {
+  link: {
+    color: '#2563eb',
+    fontWeight: '500',
+  },
+  cardItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     fontSize: 14,
-    color: '#666',
+    color: '#6b7280',
+    marginBottom: 6,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  deleteButton: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    borderRadius: 6,
+    padding: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addButton: {
     backgroundColor: '#4a63ff',
@@ -511,6 +589,12 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  loadingIndicator: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
   },
   modalContainer: {
     flex: 1,
@@ -598,12 +682,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  loadingIndicator: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
   },
 });
 
