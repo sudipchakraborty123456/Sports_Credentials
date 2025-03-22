@@ -68,10 +68,10 @@ const NeoSportApp = ({ navigation }) => {
           'Content-Type': 'application/json',
         },
       });
-  
+
       const data = await response.json();
       console.log('API Response:', data);
-  
+
       if (response.ok && data?.data && Array.isArray(data.data)) {
         const formattedMatches = data.data.flatMap((competition) =>
           (competition.match || []).map((match) => {
@@ -88,7 +88,7 @@ const NeoSportApp = ({ navigation }) => {
             };
           })
         );
-  
+
         setMatches(formattedMatches);
       } else {
         console.log('Failed to fetch matches:', data);
@@ -96,11 +96,11 @@ const NeoSportApp = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching matches:', error.message);
-      Alert.alert('Error', `An error occurred while fetching matches: ${error.message}`);
+      Alert.alert('Error', ` An error occurred while fetching matches: ${error.message}`);
     } finally {
       setIsLoading(false);
-}
-};
+    }
+  };
   // const fetchMatchesFromNewAPI = async () => {
   //   setIsLoading(true);
   //   try {
