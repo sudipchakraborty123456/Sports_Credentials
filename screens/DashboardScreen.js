@@ -230,7 +230,7 @@ const NeoSportApp = ({ navigation }) => {
   };
 
   const fetchAssignedMatchCards = async (id) => {
-    setIsLoading(true);
+    // setIsLoading(true);
     try {
       console.log(`http://api.hatrickzone.com/api/assigned-user-games/${id}`);
 
@@ -253,13 +253,13 @@ const NeoSportApp = ({ navigation }) => {
       console.error('Error fetching match cards:', error);
       Alert.alert('Error', 'An error occurred while fetching match cards.');
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
       setRefreshing(false);
     }
   };
 
   const fetchUnAssignedMatchCards = async (id) => {
-    setIsLoading(true);
+    // setIsLoading(true);
     try {
       console.log(`http://api.hatrickzone.com/api/unassigned-user-games/${id}`);
 
@@ -282,7 +282,7 @@ const NeoSportApp = ({ navigation }) => {
       console.error('Error fetching match cards:', error);
       Alert.alert('Error', 'An error occurred while fetching match cards.1');
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
       setRefreshing(false);
     }
   };
@@ -324,50 +324,48 @@ const NeoSportApp = ({ navigation }) => {
           />
         }
       >
+        {/* Matches Section */}
+        {matches.slice(0, 5).map((match, index) => (
+          <View key={index} style={styles.card}> {/* Use index as key */}
+            <View style={styles.cardContent}>
+              {/* Team 1 */}
+              <View style={styles.team}>
+                {/* <Image source={{ uri: match.team1.logo }} style={styles.teamLogo} /> */}
+                <Text style={styles.teamName}>{match.team1.name}</Text>
+              </View>
 
-        {
-          matches.slice(0, 5).map((match) => (
-            <View key={match.id} style={styles.card}>
-              <View style={styles.cardContent}>
-                {/* Team 1 */}
-                <View style={styles.team}>
-                  {/* <Image source={{ uri: match.team1.logo }} style={styles.teamLogo} /> */}
-                  <Text style={styles.teamName}>{match.team1.name}</Text>
-                </View>
+              {/* Match Info */}
+              <View style={styles.matchInfo}>
+                <Text style={styles.tournament}>{match.tournament}</Text>
+                <Text style={styles.vsText}>V/S</Text>
+                <Text style={styles.countdown}>{match.countdown}</Text>
+                <TouchableOpacity
+                  style={styles.liveButton}
+                // onPress={() => handleLiveStream(match.id)}
+                >
+                  <Text style={styles.liveButtonText}>Live Stream</Text>
+                  <View style={styles.liveIcon} />
+                </TouchableOpacity>
+              </View>
 
-                {/* Match Info */}
-                <View style={styles.matchInfo}>
-                  <Text style={styles.tournament}>{match.tournament}</Text>
-                  <Text style={styles.vsText}>V/S</Text>
-                  <Text style={styles.countdown}>{match.countdown}</Text>
-                  <TouchableOpacity
-                    style={styles.liveButton}
-                    // onPress={() => handleLiveStream(match.id)}
-                  >
-                    <Text style={styles.liveButtonText}>Live Stream</Text>
-                    <View style={styles.liveIcon} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Team 2 */}
-                <View style={styles.team}>
-                  {/* <Image source={{ uri: match.team2.logo }} style={styles.teamLogo} /> */}
-                  <Text style={styles.teamName}>{match.team2.name}</Text>
-                </View>
+              {/* Team 2 */}
+              <View style={styles.team}>
+                {/* <Image source={{ uri: match.team2.logo }} style={styles.teamLogo} /> */}
+                <Text style={styles.teamName}>{match.team2.name}</Text>
               </View>
             </View>
-          ))
-        }
+          </View>
+        ))}
 
-        {/* Match Cards */}
+        {/* Not Assigned Match Cards */}
         <Text style={styles.sectionHeader}>Not Assigned</Text>
         <View style={styles.matchContainer}>
           <View style={styles.matchRow}>
             {isLoading ? (
               <ActivityIndicator size="large" color="#4a63ff" />
             ) : (
-              matchCards.map((card) => (
-                <View key={card.game_id} style={styles.matchCard}>
+              matchCards.map((card, index) => (
+                <View key={index} style={styles.matchCard}> {/* Use index as key */}
                   <View style={styles.teamBox}>
                     <Image source={{ uri: card.game_logo }} style={styles.teamLogo} />
                     <Text>{card.name}</Text>
@@ -383,14 +381,14 @@ const NeoSportApp = ({ navigation }) => {
         </View>
 
         {/* Assigned Match Cards */}
-        {assignMatchCards.length > 0 && <Text style={styles.sectionHeader}> Assigned</Text>}
+        {assignMatchCards.length > 0 && <Text style={styles.sectionHeader}>Assigned</Text>}
         <View style={styles.matchContainer}>
           <View style={styles.matchRow}>
             {isLoading ? (
               <ActivityIndicator size="large" color="#4a63ff" />
             ) : (
-              assignMatchCards.map((card) => (
-                <View key={card.game_id} style={styles.matchCard}>
+              assignMatchCards.map((card, index) => (
+                <View key={index} style={styles.matchCard}> {/* Use index as key */}
                   <View style={styles.teamBox}>
                     <Image source={{ uri: card.game_logo }} style={styles.teamLogo} />
                     <Text>{card.game_name}</Text>
