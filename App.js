@@ -42,7 +42,7 @@ const App = () => {
   return (
     <>
       {/* Set the status bar style */}
-      {/* <StatusBar barStyle="dark-content" backgroundColor="#ffffff" /> Adjust as needed */}
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" /> 
       <NavigationContainer>
         <Stack.Navigator initialRouteName={isOnboardingComplete ? 'Splash' : 'Onboarding1'}>
           {/* Onboarding Screens */}
