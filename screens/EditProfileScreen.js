@@ -16,6 +16,7 @@ import Header from '../components/Header'; // Import Header
 import BottomNav from '../components/BottomNav'; // Import BottomNav
 
 const EditProfileScreen = ({ navigation }) => {
+  const [activeNav, setActiveNav] = useState('settings');
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -24,32 +25,77 @@ const EditProfileScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [description, setDescription] = useState('');
   const [profileImage, setProfileImage] = useState(null);
-  const [activeNav, setActiveNav] = useState('edit-profile'); // Set active nav for BottomNav
+  // Set active nav for BottomNav
+  const [emailError, setEmailError] = useState(''); // State for email validation error
 
   useEffect(() => {
     fetchUserData();
   }, []);
-
   const fetchUserData = async () => {
+    const logInDataString = await AsyncStorage.getItem('loginData');
+    const logInData = logInDataString ? JSON.parse(logInDataString) : null;
+    setUserId(logInData.data.id)
+    if (!logInData || !logInData.data || !logInData.data.id) {
+      Alert.alert('Error', 'User data not found.');
+      return;
+    }
+
     try {
-      const logInDataString = await AsyncStorage.getItem('loginData');
-      const logInData = logInDataString ? JSON.parse(logInDataString) : null;
-      if (logInData && logInData.data.id) {
-        setUserId(logInData.data.id);
-        // Pre-fill form with existing user data (if available)
-        setName(logInData.data.name || '');
-        setUsername(logInData.data.username || '');
-        setEmail(logInData.data.email || '');
-        setPhoneNumber(logInData.data.phone_number || '');
-        setDescription(logInData.data.description || '');
-        setProfileImage(logInData.data.profile_image || null);
-      } else {
-        Alert.alert('Error', 'User data not found.');
+      const response = await fetch(`http://api.hatrickzone.com/api/validate-user/${logInData.data.phone_number}`, {
+        method: 'GET',
+        headers: {
+          'Api-Key': 'base64:ipkojA8a0MLhbxrpG97TJq920WRM/D5rTXdh3uvlT+8=',
+          'Content-Type': 'application/json',
+        },
+      });
+
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user details.');
       }
-    } catch (err) {
-      Alert.alert('Error', 'Failed to fetch user data.');
+
+      const data = await response.json();
+
+      if (data.status === true && data.user_data) {
+        // Set user data in state
+        setName(data.user_data.name || '');
+        setUsername(data.user_data.username || '');
+        setEmail(data.user_data.email || '');
+        setPhoneNumber(data.user_data.phone_number || '');
+        setDescription(data.user_data.description || '');
+        setProfileImage(data.profile_image || null); // Set profile image URL
+      } else {
+        Alert.alert('Error', data.message || 'Failed to fetch user details.');
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      Alert.alert('Error', 'An error occurred while fetching user data.');
+    } finally {
+      setRefreshing(false);
     }
   };
+  // const fetchUserData = async () => {
+  //   try {
+  //     const logInDataString = await AsyncStorage.getItem('loginData');
+  //     const logInData = logInDataString ? JSON.parse(logInDataString) : null;
+  //     console.log(logInData,"logInData");
+
+  //     if (logInData && logInData.data.id) {
+  //       setUserId(logInData.data.id);
+  //       // Pre-fill form with existing user data (if available)
+  //       setName(logInData.data.name || '');
+  //       setUsername(logInData.data.username || '');
+  //       setEmail(logInData.data.email || '');
+  //       setPhoneNumber(logInData.data.phone_number || '');
+  //       setDescription(logInData.data.description || '');
+  //       setProfileImage(logInData.data.profile_image || null);
+  //     } else {
+  //       Alert.alert('Error', 'User data not found.');
+  //     }
+  //   } catch (err) {
+  //     Alert.alert('Error', 'Failed to fetch user data.');
+  //   }
+  // };
 
   const handleUploadProfileImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -70,7 +116,21 @@ const EditProfileScreen = ({ navigation }) => {
     }
   };
 
+  // Email validation function
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleUpdateProfile = async () => {
+    // Validate email before proceeding
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    } else {
+      setEmailError(''); // Clear email error if valid
+    }
+
     if (!userId) {
       Alert.alert('Error', 'User ID not found.');
       return;
@@ -109,7 +169,11 @@ const EditProfileScreen = ({ navigation }) => {
 
       if (data?.status === true) {
         Alert.alert('Success', 'Profile updated successfully!');
-        navigation.goBack(); // Navigate back to the previous screen
+        setEmail(data.data.email)
+        setDescription(data.data.description)
+        setProfileImage(data.profile_image_url)
+        setUsername(data.data.username)
+        setName(data.data.name)
       } else {
         Alert.alert('Error', data?.message || 'Failed to update profile.');
       }
@@ -131,7 +195,7 @@ const EditProfileScreen = ({ navigation }) => {
         <View style={styles.form}>
           <Text style={styles.label}>Phone Number</Text>
           <TextInput
-            style={[styles.input, !editable && styles.disabledInput]} // Apply disabled style
+            style={[styles.input, styles.disabledInput]} // Apply disabled style
             placeholder="Enter phone number"
             value={phoneNumber}
             onChangeText={setPhoneNumber}
@@ -157,12 +221,22 @@ const EditProfileScreen = ({ navigation }) => {
 
           <Text style={styles.label}>Email</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, emailError && styles.errorInput]} // Apply error style if email is invalid
             placeholder="Enter email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (!validateEmail(text)) {
+                setEmailError('Please enter a valid email address.');
+              } else {
+                setEmailError(''); // Clear error if email is valid
+              }
+            }}
             keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
           <Text style={styles.label}>Description</Text>
           <TextInput
@@ -223,6 +297,18 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
     fontSize: 16,
+  },
+  disabledInput: {
+    backgroundColor: '#f0f0f0', // Gray background for disabled state
+    color: '#a0a0a0', // Gray text for disabled state
+  },
+  errorInput: {
+    borderColor: 'red', // Highlight input with red border if invalid
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 14,
+    marginBottom: 16,
   },
   multilineInput: {
     height: 100,

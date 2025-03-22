@@ -209,6 +209,10 @@ const PaymentRequest = ({ navigation }) => {
       if (data.status) {
         Alert.alert('Success', data.message);
         setModalVisible(false);
+        setPlatform(null);
+        setAmount(null);
+        setPaymentMethod(null);
+        setReceipt(null)
         fetchDepositRequests(); // Refresh deposit requests
       } else {
         Alert.alert('Error', data.message || 'Failed to create deposit request');
@@ -327,6 +331,10 @@ const PaymentRequest = ({ navigation }) => {
       if (data.status) {
         Alert.alert('Success', data.message);
         setModalVisibleWithdraw(false);
+        setPlatform(null);
+        setAmount(null);
+        setPaymentMethod(null);
+        setReceipt(null)
         fetchWithdrawRequests(); // Refresh withdraw requests
       } else {
         Alert.alert('Error', data.message || 'Failed to create withdraw request');
@@ -465,7 +473,7 @@ const PaymentRequest = ({ navigation }) => {
                     <Text style={styles.statusPending}>{request.status}</Text>
                   </View>
                   <View style={styles.actions}>
-                    <TouchableOpacity style={styles.deleteBtn}   onPress={() => handleDeleteWithdrawRequest(request.withdrawal_id)}>
+                    <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteWithdrawRequest(request.withdrawal_id)}>
                       <Text>🗑️</Text>
                     </TouchableOpacity>
                   </View>

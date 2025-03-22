@@ -21,7 +21,8 @@ const BottomNav = ({ navigation, activeNav, setActiveNav }) => {
     { id: 'home', icon: 'home', text: 'Home' },
     ...(isLoggedIn ? [{ id: 'payment-method', icon: 'credit-card', text: 'Payment Method' }] : []),
     ...(isLoggedIn ? [{ id: 'list', icon: 'format-list-bulleted', text: 'Add Payment' }] : []),
-    { id: 'settings', icon: 'cog', text: 'Settings' },
+    ...(isLoggedIn ? [{ id: 'settings', icon: 'cog', text: 'Settings' }] : []),
+    ,
   ];
 
   const handleLogout = async () => {

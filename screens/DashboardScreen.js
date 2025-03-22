@@ -55,6 +55,7 @@ const NeoSportApp = ({ navigation }) => {
       await fetchAssignedMatchCards(logInData?.data?.id);
       await fetchUnAssignedMatchCards(logInData?.data?.id);
     } else {
+      await fetchMatchCards()
       console.log("User is not logged in, skipping assigned and unassigned match cards");
     }
     setRefreshing(false);
@@ -341,7 +342,7 @@ const NeoSportApp = ({ navigation }) => {
                   <Text style={styles.countdown}>{match.countdown}</Text>
                   <TouchableOpacity
                     style={styles.liveButton}
-                    onPress={() => handleLiveStream(match.id)}
+                    // onPress={() => handleLiveStream(match.id)}
                   >
                     <Text style={styles.liveButtonText}>Live Stream</Text>
                     <View style={styles.liveIcon} />
